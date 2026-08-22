@@ -1,0 +1,44 @@
+[
+  {
+    "id": "w-001",
+    "name": "Alice Johnson",
+    "role": "analyst",
+    "experience_years": 4.5,
+    "skills": ["SQL", "Excel", "Tableau", "Data Modeling"]
+  },
+  {
+    "id": "w-002",
+    "name": "Bob Smith",
+    "role": "developer",
+    "experience_years": 7.0,
+    "skills": ["Python", "FastAPI", "React", "PostgreSQL", "Docker"]
+  },
+  {
+    "id": "w-003",
+    "name": "Carol Williams",
+    "role": "marketer",
+    "experience_years": 3.5,
+    "skills": ["SEO", "Content Strategy", "Google Ads", "Copywriting"]
+  },
+  {
+    "id": "w-004",
+    "name": "David Brown",
+    "role": "designer",
+    "experience_years": 5.0,
+    "skills": ["Figma", "UI/UX", "Adobe Illustrator", "Prototyping"]
+  },
+  {
+    "id": "w-005",
+    "name": "Eve Davis",
+    "role": "project_manager",
+    "experience_years": 8.0,
+    "skills": ["Agile", "Scrum", "Jira", "Risk Management", "Stakeholder Communication"]
+  },
+  {
+    "id": "w-006",
+    "name": "Frank Miller",
+    "role": "data_scientist",
+    "experience_years": 2.5,
+    "skills": ["Python", "Machine Learning", "Pandas", "Scikit-Learn"]
+  }
+]
