@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "AegisFlow AI",
+  title: "Byapari",
   description: "AI-assisted command center for accountable business workflows.",
 };
 

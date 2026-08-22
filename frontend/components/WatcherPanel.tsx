@@ -1,43 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
-
-import { getWatcherStatus } from "@/lib/api";
-import type { WatcherStatus } from "@/lib/types";
+import { useCallback, useEffect, useState } from "react";
+import { getWatcherStatus } from "@/lib/api"; import { formatDateTime } from "@/lib/formatters"; import type { WatcherStatus } from "@/lib/types"; import { EmptyState, ErrorState, LoadingSkeleton } from "./AsyncStates";
 
 export function WatcherPanel() {
-  const [watcher, setWatcher] = useState<WatcherStatus | null>(null);
-  const [error, setError] = useState("");
-
-  useEffect(() => {
-    getWatcherStatus().then(setWatcher).catch((reason) => setError(reason instanceof Error ? reason.message : "Watcher unavailable"));
-  }, []);
-
-  if (error) return <div className="emptyState"><strong>Watcher unavailable</strong><p>{error}</p></div>;
-  if (!watcher) return <div className="emptyState"><strong>Loading activity…</strong></div>;
-
-  return (
-    <section className="watcherPanel">
-      <div className="watcherSummary">
-        <span className={`watcherOrb ${watcher.state.toLowerCase()}`} />
-        <div><span>System state</span><strong>{watcher.state}</strong></div>
-        <div><span>Active incidents</span><strong>{watcher.active_incidents}</strong></div>
-      </div>
-      {watcher.events.length ? (
-        <ol className="eventList">
-          {watcher.events.map((event, index) => (
-            <li key={`${event.created_at}-${index}`}>
-              <time>{new Date(event.created_at).toLocaleTimeString()}</time>
-              <strong>{event.component}</strong>
-              <span>{event.event_type}</span>
-              <p>{event.message}</p>
-            </li>
-          ))}
-        </ol>
-      ) : (
-        <div className="emptyState"><strong>No incidents recorded.</strong><p>The watcher is idle and ready to record retry or recovery events.</p></div>
-      )}
-    </section>
-  );
+  const [watcher, setWatcher] = useState<WatcherStatus | null>(null); const [error, setError] = useState(""); const [loading, setLoading] = useState(true);
+  const load = useCallback(async () => { try { setWatcher(await getWatcherStatus()); setError(""); } catch (reason) { setError(reason instanceof Error ? reason.message : "Watcher unavailable."); } finally { setLoading(false); } }, []);
+  useEffect(() => { const initial = window.setTimeout(() => void load(), 0); const timer = window.setInterval(() => void load(), 4000); return () => { window.clearTimeout(initial); window.clearInterval(timer); }; }, [load]);
+  if (loading) return <LoadingSkeleton rows={5}/>; if (error && !watcher) return <ErrorState message={error} retry={() => void load()}/>; if (!watcher) return null;
+  return <div className="watcherView">{error && <p className="inlineError" role="alert">Latest refresh failed: {error}</p>}<section className={`systemBanner ${watcher.state.toLowerCase()}`}><div><span>System status</span><h2>{watcher.state === "IDLE" ? "ALL SYSTEMS OPERATIONAL" : "WATCHER ACTIVE"}</h2><p>{watcher.state === "IDLE" ? "No active recovery operation." : "The Watcher is monitoring an active incident."}</p></div><div><strong>{watcher.active_incidents}</strong><span>Active incidents</span></div></section><section className="eventLog"><header><div><span>Watcher activity</span><h2>System Event Log</h2></div><small>Updates every 4 seconds</small></header>{watcher.events.length ? <div className="eventTableWrap"><table><thead><tr><th>Timestamp</th><th>Workflow</th><th>Component</th><th>Event</th><th>Retry</th><th>Status</th><th>Message</th></tr></thead><tbody>{watcher.events.map((event, index) => <tr key={`${event.created_at}-${index}`}><td>{formatDateTime(event.created_at)}</td><td>{event.workflow_id ?? "System"}</td><td>{event.component}</td><td>{event.event_type}</td><td>{event.retry_count}</td><td><span className={`eventStatus ${event.resolved ? "resolved" : "open"}`}>{event.resolved ? "Resolved" : "Open"}</span></td><td>{event.message}</td></tr>)}</tbody></table></div> : <EmptyState title="No system incidents" message="No system incidents have been recorded."/>}</section></div>;
 }
-
