@@ -2,7 +2,7 @@
 
 Shared rule: changes to `backend/app/schemas`, `frontend/lib/types.ts`, or published endpoint shapes require a short team review because they affect everyone.
 
-## Person 1 — backend lead, orchestrator, management
+## Person 1 — backend lead, orchestrator, management (Rabin  Bam)
 
 Owns:
 
@@ -17,7 +17,7 @@ Start with: replace `MockAIProvider` behind the existing `AIService` protocol an
 
 First handoff: keep `POST /api/v1/workflows`, `GET /api/v1/workflows/{id}`, and `GET /api/v1/workflows/{id}/tasks` compatible with the frontend types.
 
-## Person 2 — workers, reports, prediction
+## Person 2 — workers, reports, prediction (Nishkarsha)
 
 Owns:
 
@@ -33,7 +33,7 @@ Start with: add deterministic worker profiles and matching, then create a small 
 
 First handoff: return a `Report` matching both the Pydantic and TypeScript contracts.
 
-## Person 3 — marketing, watcher, reliability, Docker
+## Person 3 — marketing, watcher, reliability, Docker (Rujal)
 
 Owns:
 
@@ -50,7 +50,7 @@ Start with: implement event recording and the retry wrapper, then connect market
 
 First handoff: make failure, retry, and recovery events visible through `/api/v1/watcher`.
 
-## Person 4 — command center and workflow UI
+## Person 4 — command center and workflow UI (Aarogya )
 
 Owns:
 
@@ -66,7 +66,7 @@ Start with: extend the working create-and-view flow, add polling for stage chang
 
 First handoff: coordinate schema changes with Person 1, never infer business state in the browser.
 
-## Person 5 — reports, marketing, watcher UI
+## Person 5 — reports, marketing, watcher UI ( Shaira )
 
 Owns:
 
