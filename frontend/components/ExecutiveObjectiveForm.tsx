@@ -41,45 +41,41 @@ export function ExecutiveObjectiveForm() {
     <form className="objectiveForm" onSubmit={submit}>
       <div className="formHeading">
         <div>
-          <p className="panelLabel">New directive</p>
-          <h2>Set the executive objective</h2>
+          <h2>Executive Objective Formulation</h2>
+          <p>Define high-level business goals to initialize automated workflows.</p>
         </div>
-        <span className="liveChip"><i /> Ready</span>
+        <span className="formFlag" aria-hidden="true">⚑</span>
       </div>
 
+      <input name="title" type="hidden" value="Executive business objective" readOnly />
       <label>
-        Initiative name
-        <input name="title" required minLength={3} maxLength={120} defaultValue="Regional product launch" />
-      </label>
-
-      <label>
-        Objective
+        Primary Directive
         <textarea
           name="objective"
           required
           minLength={10}
           maxLength={2000}
           rows={5}
-          defaultValue="Launch the new service in Kathmandu with a measurable sales plan, controlled marketing budget, and clear management reporting."
+          placeholder="Enter Q3 operational targets..."
         />
       </label>
 
       <div className="formRow">
         <label>
-          Approved budget
-          <div className="inputPrefix"><span>NPR</span><input name="budget" type="number" min="0" step="1000" defaultValue="500000" required /></div>
+          Target Completion
+          <input name="deadline" type="date" defaultValue={defaultDeadline()} required />
         </label>
         <label>
-          Deadline
-          <input name="deadline" type="date" defaultValue={defaultDeadline()} required />
+          Budget Allocation (NPR)
+          <div className="inputPrefix"><span>रु</span><input name="budget" type="number" min="0" step="1000" placeholder="0.00" required /></div>
         </label>
       </div>
 
       {error && <p className="formError" role="alert">{error}</p>}
-      <button type="submit" disabled={pending}>
-        {pending ? "Starting workflow…" : "Execute workflow"}
-        <span aria-hidden="true">→</span>
-      </button>
+      <div className="formActions">
+        <button type="button" className="draftButton">Save Draft</button>
+        <button type="submit" disabled={pending}>{pending ? "Deploying…" : "Deploy Objective"}</button>
+      </div>
     </form>
   );
 }
