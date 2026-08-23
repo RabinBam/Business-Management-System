@@ -1,4 +1,4 @@
-import type { ApiResponse, Task, WatcherStatus, Workflow, WorkflowCreate } from "./types";
+import type { ApiResponse, Task, WatcherStatus, Workflow, WorkflowCreate, Report, MarketingPlan } from "./types";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v1";
 
@@ -23,4 +23,7 @@ export function getWorkflow(id: string) { return request<Workflow>(`/workflows/$
 export function runWorkflow(id: string) { return request<Workflow>(`/workflows/${id}/run`, { method: "POST" }); }
 export function getTasks(id: string) { return request<Task[]>(`/workflows/${id}/tasks`); }
 export function getWatcherStatus() { return request<WatcherStatus>("/watcher"); }
+export function getReport(id: string) { return request<Report>(`/reports/${id}`); }
+export function getMarketingPlan(id: string) { return request<MarketingPlan>(`/marketing/${id}`); }
+export function updateMarketingPlan(id: string, plan: Partial<MarketingPlan>) { return request<MarketingPlan>(`/marketing/${id}`, { method: "PATCH", body: JSON.stringify(plan) }); }
 
