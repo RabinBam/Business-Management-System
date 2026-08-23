@@ -162,3 +162,45 @@ def test_past_deadline_is_rejected() -> None:
 
     with pytest.raises(WorkflowValidationError, match="past"):
         service.create(_payload(deadline=date.today() - timedelta(days=1)))
+
+
+def test_concurrent_runs_are_serialized_and_idempotent() -> None:
+    service = WorkflowService(
+        ai_service=MockAIProvider(),
+        collaborators=_complete_collaborators(),
+    )
+    workflow = service.create(_payload())
+
+    async def run_twice() -> list[object]:
+        return await asyncio.gather(
+            service.run_workflow(workflow.id),
+            service.run_workflow(workflow.id),
+        )
+
+    results = asyncio.run(run_twice())
+
+    assert all(result.status is WorkflowStatus.COMPLETED for result in results)
+    tasks = service.get_tasks(workflow.id)
+    assert tasks is not None
+    assert len(tasks) == 2
+
+
+def test_workflow_emits_events_through_observer_port() -> None:
+    events: list[tuple[str, str, str, str, int]] = []
+    collaborators = _complete_collaborators()
+    service = WorkflowService(
+        ai_service=MockAIProvider(),
+        collaborators=WorkflowCollaborators(
+            execute_workers=collaborators.execute_workers,
+            generate_report=collaborators.generate_report,
+            generate_marketing=collaborators.generate_marketing,
+            record_event=lambda *event: events.append(event),
+        ),
+    )
+    workflow = service.create(_payload())
+
+    result = asyncio.run(service.run_workflow(workflow.id))
+
+    assert result.status is WorkflowStatus.COMPLETED
+    assert any(event[2] == "STATUS_CHANGED" for event in events)
+    assert events[-1][3] == "Workflow entered COMPLETED"

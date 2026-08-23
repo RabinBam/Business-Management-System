@@ -73,6 +73,8 @@ class OpenAIProvider:
                 store=False,
                 timeout=self._config.ai_timeout_seconds,
             )
+        except ValidationError as exc:
+            raise AIResponseError("OpenAI output failed Pydantic validation") from exc
         except OpenAIError as exc:
             raise AIServiceError(f"OpenAI request failed: {exc.__class__.__name__}") from exc
 

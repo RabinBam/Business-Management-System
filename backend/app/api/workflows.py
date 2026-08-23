@@ -8,6 +8,7 @@ from app.schemas.workflow import WorkflowCreate, WorkflowRead
 from app.services.workflow_service import (
     WorkflowConflictError,
     WorkflowExecutionError,
+    WorkflowNotFoundError,
     WorkflowService,
     WorkflowValidationError,
     get_workflow_service,
@@ -66,6 +67,8 @@ async def run_workflow(workflow_id: str, service: Service) -> ApiResponse[Workfl
         raise _not_found(workflow_id)
     try:
         workflow = await service.run_workflow(workflow_id)
+    except WorkflowNotFoundError as exc:
+        raise _not_found(workflow_id) from exc
     except WorkflowConflictError as exc:
         raise _workflow_error(
             status_code=status.HTTP_409_CONFLICT,

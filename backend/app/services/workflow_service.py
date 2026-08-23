@@ -1,3 +1,4 @@
+import asyncio
 import inspect
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
@@ -57,15 +58,22 @@ ReportGenerator = Callable[
 MarketingGenerator = Callable[
     [WorkflowRead, Report], Awaitable[MarketingPlan] | MarketingPlan
 ]
+EventRecorder = Callable[[str, str, str, str, int], None]
 
 
 @dataclass(frozen=True)
 class WorkflowCollaborators:
-    """Ports implemented by Persons 2 and 3; Person 1 only coordinates them."""
+    """Ports implemented by Persons 2 and 3; Person 1 only coordinates them.
+
+    ``record_event`` receives workflow ID, component, event type, message, and
+    retry count. A Watcher adapter can consume these without coupling this
+    service to Person 3's persistence implementation.
+    """
 
     execute_workers: WorkerExecutor | None = None
     generate_report: ReportGenerator | None = None
     generate_marketing: MarketingGenerator | None = None
+    record_event: EventRecorder | None = None
 
 
 @dataclass
@@ -110,10 +118,10 @@ class WorkflowService:
         self._workflows: dict[str, WorkflowRead] = {}
         self._tasks: dict[str, list[TaskRead]] = {}
         self._artifacts: dict[str, WorkflowArtifacts] = {}
+        self._run_locks: dict[str, asyncio.Lock] = {}
         self._lock = RLock()
         self._ai_service = ai_service
         self._collaborators = collaborators or WorkflowCollaborators()
-        self._orchestrator: Orchestrator | None = None
         self._manager: Manager | None = None
 
     def configure_collaborators(self, collaborators: WorkflowCollaborators) -> None:
@@ -128,6 +136,7 @@ class WorkflowService:
             self._workflows[workflow_id] = workflow
             self._tasks[workflow_id] = []
             self._artifacts[workflow_id] = WorkflowArtifacts()
+            self._run_locks[workflow_id] = asyncio.Lock()
         return workflow.model_copy(deep=True)
 
     def get(self, workflow_id: str) -> WorkflowRead | None:
@@ -172,14 +181,31 @@ class WorkflowService:
                 workflow.started_at = now
             if target is WorkflowStatus.COMPLETED:
                 workflow.completed_at = now
-            return workflow.model_copy(deep=True)
+            updated = workflow.model_copy(deep=True)
+        self._record_event(
+            workflow_id,
+            "workflow_service",
+            "STATUS_CHANGED",
+            f"Workflow entered {target}",
+            0,
+        )
+        return updated
 
     async def run_workflow(self, workflow_id: str) -> WorkflowRead:
+        run_lock = self._get_run_lock(workflow_id)
+        async with run_lock:
+            return await self._run_workflow_locked(workflow_id)
+
+    async def _run_workflow_locked(self, workflow_id: str) -> WorkflowRead:
         workflow = self.require(workflow_id)
         if workflow.status is WorkflowStatus.COMPLETED:
             return workflow
         if workflow.status is WorkflowStatus.FAILED:
             raise WorkflowConflictError("A failed workflow cannot be resumed")
+        if workflow.status in {WorkflowStatus.SEGMENTING, WorkflowStatus.ASSIGNING}:
+            raise WorkflowConflictError(
+                f"Workflow cannot resume from transient state {workflow.status}"
+            )
 
         try:
             if workflow.status is WorkflowStatus.CREATED:
@@ -207,7 +233,8 @@ class WorkflowService:
 
     async def _plan_and_refine(self, workflow: WorkflowRead) -> WorkflowRead:
         self.transition(workflow.id, WorkflowStatus.SEGMENTING)
-        orchestrator, manager = self._get_agents()
+        orchestrator = self._build_orchestrator(workflow.id)
+        manager = self._get_manager()
         generated = await orchestrator.segment(
             objective=workflow.objective,
             budget=workflow.budget,
@@ -247,7 +274,7 @@ class WorkflowService:
         artifacts = self._artifacts[workflow.id]
         if not artifacts.worker_results:
             raise WorkflowConflictError("Worker results are unavailable for management review")
-        _, manager = self._get_agents()
+        manager = self._get_manager()
         reviews = await manager.review_results(
             tasks=tasks,
             results=artifacts.worker_results,
@@ -290,7 +317,7 @@ class WorkflowService:
         artifacts = self._artifacts[workflow.id]
         if artifacts.report is None or artifacts.marketing is None:
             raise WorkflowConflictError("Final review inputs are incomplete")
-        _, manager = self._get_agents()
+        manager = self._get_manager()
         summary = await manager.create_executive_summary(
             workflow=workflow,
             report=artifacts.report,
@@ -322,7 +349,15 @@ class WorkflowService:
                 message=message,
                 failed_stage=failed_stage,
             )
-            return workflow.model_copy(deep=True)
+            failed = workflow.model_copy(deep=True)
+        self._record_event(
+            workflow_id,
+            "workflow_service",
+            "FAILED",
+            message,
+            0,
+        )
+        return failed
 
     def store_executive_summary(
         self,
@@ -339,11 +374,6 @@ class WorkflowService:
             workflow.updated_at = datetime.now(UTC)
             return workflow.model_copy(deep=True)
 
-    def run(self, workflow_id: str) -> WorkflowRead:
-        """Deprecated synchronous compatibility transition for older callers."""
-
-        return self.transition(workflow_id, WorkflowStatus.SEGMENTING)
-
     def clear(self) -> None:
         """Clear volatile storage for isolated tests."""
 
@@ -351,6 +381,7 @@ class WorkflowService:
             self._workflows.clear()
             self._tasks.clear()
             self._artifacts.clear()
+            self._run_locks.clear()
 
     def _set_all_task_statuses(self, workflow_id: str, status: TaskStatus) -> None:
         tasks = self.get_tasks(workflow_id)
@@ -372,20 +403,55 @@ class WorkflowService:
         if set(result_ids) != task_ids:
             raise WorkflowValidationError("Worker results must cover every workflow task")
 
-    def _get_agents(self) -> tuple[Orchestrator, Manager]:
-        if self._orchestrator is None or self._manager is None:
-            ai_service = self._ai_service or get_ai_service()
-            self._orchestrator = Orchestrator(
-                ai_service,
-                model=settings.ai_primary_model or None,
-                max_tasks=settings.ai_max_tasks,
-                validation_retries=1,
-            )
+    def _build_orchestrator(self, workflow_id: str) -> Orchestrator:
+        return Orchestrator(
+            self._get_ai_service(),
+            model=settings.ai_primary_model or None,
+            max_tasks=settings.ai_max_tasks,
+            validation_retries=1,
+            on_validation_failure=lambda error, attempt: self._record_event(
+                workflow_id,
+                "orchestrator",
+                "VALIDATION_FAILED",
+                str(error),
+                attempt,
+            ),
+        )
+
+    def _get_manager(self) -> Manager:
+        if self._manager is None:
             self._manager = Manager(
-                ai_service,
+                self._get_ai_service(),
                 model=settings.ai_primary_model or None,
             )
-        return self._orchestrator, self._manager
+        return self._manager
+
+    def _get_ai_service(self) -> AIService:
+        if self._ai_service is None:
+            self._ai_service = get_ai_service()
+        return self._ai_service
+
+    def _get_run_lock(self, workflow_id: str) -> asyncio.Lock:
+        with self._lock:
+            self._require_stored(workflow_id)
+            return self._run_locks.setdefault(workflow_id, asyncio.Lock())
+
+    def _record_event(
+        self,
+        workflow_id: str,
+        component: str,
+        event_type: str,
+        message: str,
+        retry_count: int,
+    ) -> None:
+        recorder = self._collaborators.record_event
+        if recorder is None:
+            return
+        try:
+            recorder(workflow_id, component, event_type, message, retry_count)
+        except Exception:
+            # Monitoring must never become a new workflow failure mode.
+            return
 
     def _require_stored(self, workflow_id: str) -> WorkflowRead:
         workflow = self._workflows.get(workflow_id)
