@@ -1,12 +1,11 @@
 import type { WorkflowStatus } from "@/lib/types";
 
 const stages: Array<{ label: string; statuses: WorkflowStatus[] }> = [
-  { label: "Objective", statuses: ["CREATED", "SEGMENTING"] },
-  { label: "Management", statuses: ["ASSIGNING"] },
-  { label: "Workers", statuses: ["EXECUTING", "REVIEWING"] },
-  { label: "Report", statuses: ["REPORTING"] },
-  { label: "Marketing", statuses: ["MARKETING"] },
-  { label: "Final review", statuses: ["FINAL_REVIEW", "COMPLETED"] },
+  { label: "Created", statuses: ["CREATED"] }, { label: "Segmentation", statuses: ["SEGMENTING"] },
+  { label: "Assignment", statuses: ["ASSIGNING"] }, { label: "Execution", statuses: ["EXECUTING"] },
+  { label: "Review", statuses: ["REVIEWING"] }, { label: "Reporting", statuses: ["REPORTING"] },
+  { label: "Marketing", statuses: ["MARKETING"] }, { label: "Final review", statuses: ["FINAL_REVIEW"] },
+  { label: "Complete", statuses: ["COMPLETED"] },
 ];
 
 const order: WorkflowStatus[] = [
