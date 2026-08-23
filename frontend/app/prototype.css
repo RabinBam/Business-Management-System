@@ -1,0 +1,46 @@
+.topbarNew > span.demoMode{background:var(--blue-soft);color:var(--blue)}
+.topbarNew > span.demoMode i{background:var(--blue)}
+.dashboardKpis{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px}
+.dashboardKpis article{padding:18px;border:1px solid var(--border);border-radius:13px;background:#fff;box-shadow:var(--shadow)}
+.dashboardKpis span{color:var(--muted);font-size:.66rem;font-weight:800;text-transform:uppercase}
+.dashboardKpis strong{display:block;margin:9px 0 5px;font-size:1.35rem}
+.dashboardKpis small{color:var(--muted);font-size:.67rem}
+.commandBoard{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:20px}
+.commandPrimary{display:grid;gap:20px}
+.aiDecisionPanel{align-self:start;overflow:hidden;border:1px solid var(--border);border-radius:var(--radius);background:#fff;box-shadow:var(--shadow)}
+.aiDecisionPanel>header{display:flex;align-items:center;gap:10px;padding:21px;border-bottom:1px solid var(--border);color:var(--blue)}
+.aiDecisionPanel h2{margin:0;color:var(--text);font-size:1.05rem}
+.aiDecisionPanel>div{padding:18px}
+.aiDecisionPanel article{position:relative;padding:0 0 21px 20px;border-left:2px solid var(--border)}
+.aiDecisionPanel article.active{border-left-color:var(--blue)}
+.aiDecisionPanel article::before{content:"";position:absolute;left:-5px;top:2px;width:8px;height:8px;border-radius:50%;background:#cbd5e1}
+.aiDecisionPanel article.active::before{background:var(--blue)}
+.aiDecisionPanel article header{display:flex;justify-content:space-between;gap:10px;font-size:.68rem}
+.aiDecisionPanel article time{color:var(--muted);white-space:nowrap}
+.aiDecisionPanel article p{margin:7px 0;color:var(--muted);font-size:.73rem;line-height:1.5}
+.aiDecisionPanel>footer{padding:17px 20px;background:#f8fafc}
+.aiDecisionPanel>footer span{color:var(--blue);font-size:.65rem;font-weight:800;text-transform:uppercase}
+.aiDecisionPanel>footer p{margin:6px 0 0;color:var(--muted);font-size:.7rem;line-height:1.45}
+.overviewCard li.passed i{background:var(--blue);color:#fff}
+.overviewCard li.current i{box-shadow:0 0 0 5px rgb(37 99 235 / 13%)}
+.reportGrid{grid-template-columns:minmax(250px,.55fr) minmax(0,1.45fr)}
+.utilizationCard{padding:24px;border:1px solid var(--border);border-radius:var(--radius);background:#fff;box-shadow:var(--shadow)}
+.utilizationCard>span{color:var(--muted);font-size:.68rem;font-weight:800;text-transform:uppercase}
+.reportDonut{width:185px;height:185px;display:grid;place-items:center;margin:25px auto;border-radius:50%;background:conic-gradient(var(--blue) var(--usage),#e7edf5 0)}
+.reportDonut::before{content:"";grid-area:1/1;width:130px;height:130px;border-radius:50%;background:#fff}
+.reportDonut>div{z-index:1;grid-area:1/1;display:grid;text-align:center}
+.reportDonut strong{font-size:2rem}.reportDonut small{color:var(--muted)}
+.utilizationCard dl{display:grid;gap:10px;margin:0}.utilizationCard dl div{padding:11px;border-radius:8px;background:var(--bg)}
+.utilizationCard dt{color:var(--muted);font-size:.65rem}.utilizationCard dd{margin:4px 0 0;font-weight:800}
+.reportInsights{display:grid;grid-template-columns:1fr 1.4fr;gap:24px;margin-top:20px}
+.reportInsights section+section{margin:0;padding:0 0 0 24px;border-top:0;border-left:1px solid var(--border)}
+.secondaryButton{border:1px solid var(--border);border-radius:9px;background:#fff;padding:11px 16px;color:var(--text);font-weight:750}
+.allocationList article{grid-template-columns:36px 1fr 150px;gap:14px}
+.channelIcon{width:32px;height:32px;display:grid;place-items:center;border-radius:8px;background:var(--blue-soft);color:var(--blue);font-size:.7rem;font-weight:900}
+.healthGrid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-top:18px}
+.healthGrid article{padding:18px;border:1px solid var(--border);border-radius:12px;background:#fff}
+.healthGrid span{display:block;color:var(--muted);font-size:.68rem}.healthGrid strong{display:block;margin:18px 0 8px}
+.healthGrid small{padding:4px 6px;border-radius:5px;font-size:.62rem;text-transform:capitalize}
+.healthGrid small.healthy{background:var(--green-soft);color:var(--green)}.healthGrid small.warning{background:#fff4df;color:var(--amber)}
+@media(max-width:1050px){.commandBoard,.reportGrid{grid-template-columns:1fr}.dashboardKpis,.healthGrid{grid-template-columns:1fr 1fr}}
+@media(max-width:720px){.dashboardKpis,.healthGrid,.reportInsights{grid-template-columns:1fr}.reportInsights section+section{padding:18px 0 0;border-left:0;border-top:1px solid var(--border)}.allocationList article{grid-template-columns:36px 1fr}.allocationList input{grid-column:1/-1}}

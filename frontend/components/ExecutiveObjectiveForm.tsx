@@ -19,7 +19,7 @@ export function ExecutiveObjectiveForm() {
 
   async function submit(event: FormEvent) {
     event.preventDefault(); if (pending) return; setPending("create"); setError("");
-    try { setWorkflow(await createWorkflow({ ...form, budget: Number(form.budget) })); }
+    try { const created = await createWorkflow({ ...form, budget: Number(form.budget) }); setWorkflow(created); window.localStorage.setItem("byapari:lastWorkflowId", created.id); }
     catch (reason) { setError(reason instanceof Error ? reason.message : "Unable to create workflow."); }
     finally { setPending(null); }
   }

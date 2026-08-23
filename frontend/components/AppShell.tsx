@@ -2,22 +2,28 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import type { ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 
 function workflowId(pathname: string) {
   const match = pathname.match(/^\/(?:workflows|reports|marketing)\/([^/]+)/);
   return match?.[1] ? decodeURIComponent(match[1]) : null;
 }
 
-export function AppShell({ children }: { children: ReactNode }) {
+export function AppShell({ children, mode }: { children: ReactNode; mode?: "demo" | "real" }) {
   const pathname = usePathname();
-  const id = workflowId(pathname);
+  const pathId = workflowId(pathname);
+  const [savedId, setSavedId] = useState<string | null>(null);
+  useEffect(() => { const timer = window.setTimeout(() => setSavedId(window.localStorage.getItem("byapari:lastWorkflowId")), 0); return () => window.clearTimeout(timer); }, []);
+  const id = pathId && pathId !== "demo" ? pathId : savedId;
+  const targetId = id ?? "demo";
   const links = [
     ["Command Center", "/", "▦"],
-    ["Workflow", id ? `/workflows/${id}` : "/", "⌘"],
-    ["Reports", id ? `/reports/${id}` : "/", "▥"],
-    ["Marketing", id ? `/marketing/${id}` : "/", "⌁"],
-    ["Watcher", "/watcher", "⌁"],
+    ["Workflow", `/workflows/${targetId}`, "⌘"],
+    ["Reports", `/reports/${targetId}`, "▥"],
+    ["Marketing", `/marketing/${targetId}`, "⌁"],
+    ["Watcher", id ? "/watcher" : "/watcher?demo=1", "⌁"],
   ];
-  return <main className="appShell"><aside className="sidebar"><Link className="brandBlock" href="/"><span>B</span><div><strong>Byapari</strong><small>Decision Intelligence</small></div></Link><nav aria-label="Primary navigation">{links.map(([label, href, icon]) => { const active = href === "/" ? pathname === "/" : pathname.startsWith(href.split("/").slice(0, 2).join("/")); const disabled = !id && ["Workflow", "Reports", "Marketing"].includes(label); return <Link aria-disabled={disabled} className={`${active ? "active" : ""} ${disabled ? "disabled" : ""}`} href={href} key={label}><b aria-hidden="true">{icon}</b>{label}</Link>; })}</nav><small className="version">v1.0</small></aside><div className="appBody"><header className="topbarNew"><strong>Kathmandu Digital Pvt. Ltd.</strong><span><i/> System Online</span></header><div className="pageCanvas">{children}</div></div></main>;
+  const activeFor = (label: string) => label === "Command Center" ? pathname === "/" : label === "Workflow" ? pathname.startsWith("/workflows") : label === "Reports" ? pathname.startsWith("/reports") : label === "Marketing" ? pathname.startsWith("/marketing") : pathname.startsWith("/watcher");
+  const demoMode = mode === "demo" || pathId === "demo";
+  return <main className="appShell"><aside className="sidebar"><Link className="brandBlock" href="/"><span>B</span><div><strong>Byapari</strong><small>Decision Intelligence</small></div></Link><nav aria-label="Primary navigation">{links.map(([label, href, icon]) => <Link className={activeFor(label) ? "active" : ""} href={href} key={label}><b aria-hidden="true">{icon}</b>{label}</Link>)}</nav><small className="version">v1.0</small></aside><div className="appBody"><header className="topbarNew"><strong>Kathmandu Digital Pvt. Ltd.</strong><span className={demoMode ? "demoMode" : ""}><i/>{demoMode ? "Prototype Mode" : "Workspace"}</span></header><div className="pageCanvas">{children}</div></div></main>;
 }
