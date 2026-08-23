@@ -1,0 +1,12 @@
+"use client";
+import { useMemo, useState } from "react";
+import { demoWorkers } from "@/lib/demoData";
+import { ProgressBar } from "./charts/ProgressBar";
+
+const filters=["All","Available","Sales","Finance","Marketing"] as const;
+export function WorkersView({demo}:{demo:boolean}) {
+  const [filter,setFilter]=useState<(typeof filters)[number]>("All"); const [query,setQuery]=useState("");
+  const workers=useMemo(()=>demo?demoWorkers:[],[demo]);
+  const visible=useMemo(()=>workers.filter(worker=>{const filterMatch=filter==="All"||(filter==="Available"?worker.availability==="AVAILABLE":worker.department===filter);const q=query.toLowerCase();return filterMatch&&(!q||`${worker.name} ${worker.position} ${worker.department}`.toLowerCase().includes(q));}),[filter,query,workers]);
+  return <><header className="pageTitle"><div><span>Company resources</span><h1>AI Workforce</h1><p>Manage and monitor specialized workers, skills, availability, and workload.</p></div><span className="directoryBadge">{workers.length} workers</span></header><section className="workerToolbar"><div>{filters.map(item=><button className={filter===item?"active":""} key={item} onClick={()=>setFilter(item)}>{item}</button>)}</div><input aria-label="Search workers" placeholder="Search name, position or department" value={query} onChange={event=>setQuery(event.target.value)}/></section>{!demo?<section className="stateCard"><span>○</span><h2>Worker directory awaiting backend integration</h2><p>A documented worker-directory endpoint is required for real staff data.</p></section>:<section className="workerBento">{visible.map(worker=><article className="workerCard" key={worker.id}><header><span className="workerAvatar">{worker.initials}</span><div><h2>{worker.name}</h2><p>{worker.position}</p></div><small className={worker.availability.toLowerCase()}>{worker.availability.replace("_"," ")}</small></header><div className="workerMeta"><span>{worker.department}</span><b>{worker.experience_level}</b></div><dl><div><dt>Email</dt><dd>{worker.email}</dd></div><div><dt>Phone</dt><dd>{worker.phone}</dd></div><div><dt>Current Assignment</dt><dd>{worker.current_assignment??"None"}</dd></div></dl><div className="workerSkills">{worker.skills.map(skill=><span key={skill}>{skill}</span>)}</div><footer><div><b>Workload</b><strong>{worker.workload}%</strong></div><ProgressBar value={worker.workload}/></footer></article>)}</section>}</>;
+}

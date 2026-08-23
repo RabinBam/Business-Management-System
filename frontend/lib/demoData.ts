@@ -38,3 +38,19 @@ export const demoDashboard = { totalBudget:500000,plannedSpend:420000,remainingB
 ] };
 
 export const demoComponentHealth = [{name:"Workflow Engine",value:"Operational",tone:"healthy"},{name:"Worker Service",value:"4 active tasks",tone:"healthy"},{name:"Report Agent",value:"Review needed",tone:"warning"},{name:"Marketing Agent",value:"Recovered",tone:"healthy"}];
+
+export interface DemoWorker { id:string; name:string; position:string; department:"Sales"|"Finance"|"Marketing"; availability:"AVAILABLE"|"BUSY"|"ON_TASK"|"OFFLINE"; email:string; phone:string; current_assignment:string|null; skills:string[]; experience_level:string; workload:number; initials:string }
+export const demoWorkers: DemoWorker[] = [
+  {id:"W-101",name:"Aarav Sharma",position:"Senior Sales Analyst",department:"Sales",availability:"ON_TASK",email:"aarav@kathmandudigital.com",phone:"+977-9812345678",current_assignment:"Q3 Revenue Projection Model",skills:["Sales Analytics","Forecasting","Excel"],experience_level:"Level 4 Expert",workload:78,initials:"AS"},
+  {id:"W-102",name:"Maya Karki",position:"Finance Auditor",department:"Finance",availability:"AVAILABLE",email:"maya@kathmandudigital.com",phone:"+977-9823456789",current_assignment:null,skills:["Budgeting","Audit","Financial Analysis"],experience_level:"Level 3 Senior",workload:20,initials:"MK"},
+  {id:"W-103",name:"Saanvi Thapa",position:"Brand Copywriter",department:"Marketing",availability:"BUSY",email:"saanvi@kathmandudigital.com",phone:"+977-9834567890",current_assignment:"Product Launch Campaign Copy",skills:["Copywriting","Brand Strategy","Content"],experience_level:"Level 5 Master",workload:64,initials:"ST"},
+  {id:"W-104",name:"Rohan Gurung",position:"Market Research Analyst",department:"Marketing",availability:"AVAILABLE",email:"rohan@kathmandudigital.com",phone:"+977-9845678901",current_assignment:null,skills:["Research","Segmentation","Survey Design"],experience_level:"Level 2 Specialist",workload:15,initials:"RG"},
+  {id:"W-105",name:"Ishani Rai",position:"Revenue Operations Lead",department:"Sales",availability:"OFFLINE",email:"ishani@kathmandudigital.com",phone:"+977-9856789012",current_assignment:"Sales Process Audit",skills:["CRM","Revenue Ops","Planning"],experience_level:"Level 4 Expert",workload:45,initials:"IR"},
+  {id:"W-106",name:"Nirav Joshi",position:"Financial Planning Analyst",department:"Finance",availability:"ON_TASK",email:"nirav@kathmandudigital.com",phone:"+977-9867890123",current_assignment:"Campaign Budget Assessment",skills:["FP&A","Forecasting","Risk"],experience_level:"Level 3 Senior",workload:82,initials:"NJ"},
+];
+export const demoCompanyMetrics={totalBudget:4200000,estimatedSpend:1800000,predictedGrowth:24.5,budgetTrend:[1.8,2.1,2.6,3.1,3.6,4.2],growthHistory:[8,11,9,15,13,19,16,22,18,24.5],confidence:92};
+export const demoCategoryBreakdown=[{name:"Operations",value:40},{name:"Marketing",value:25},{name:"R&D",value:20},{name:"Other",value:15}];
+export const demoSalesForecast=[{month:"Jan",historical:80},{month:"Feb",historical:86},{month:"Mar",historical:91},{month:"Apr",historical:94},{month:"May",forecast:101},{month:"Jun",forecast:109},{month:"Jul",forecast:114}];
+export const demoTaskProgress:Record<string,number>={"TSK-101":100,"TSK-102":100,"TSK-103":65,"TSK-104":0};
+export const demoTaskAssignees:Record<string,string>={"TSK-101":"Aarav Sharma","TSK-102":"Maya Karki","TSK-103":"Rohan Gurung","TSK-104":"Saanvi Thapa"};
+export const demoExecutiveSummary={activeWorkflows:3,completedWorkflows:12,totalRevenue:4200000,marketingRoi:245,decisionAccuracy:98.2,salesGrowth:15,marketingStatus:"Plan awaiting approval",recommendations:["Approve the Product X channel allocation.","Retain NPR 80,000 campaign contingency.","Review the open Report Agent validation warning."],workflowCompletion:[{name:"Product X Launch",value:62},{name:"Customer Retention",value:84},{name:"Finance Automation",value:100}]};
