@@ -13,3 +13,7 @@ export function WorkflowPipeline({ status }: { status: WorkflowStatus }) {
     return <div className={`pipelineStage ${state}`} key={stage.label}><span>{state === "complete" ? "✓" : String(index + 1).padStart(2, "0")}</span><strong>{stage.label}</strong></div>;
   })}</section>;
 }
+<<<<<<< HEAD
+=======
+
+>>>>>>> 679be4163add0f55ac625c395f8a32c9b10f9b95
