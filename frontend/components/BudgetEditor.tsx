@@ -19,7 +19,7 @@ export function BudgetEditor({ id }: { id: string }) {
   ];
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.4fr) minmax(280px, 0.9fr)', gap: '20px', marginTop: '30px' }}>
+    <div className="marketingPlannerGrid" style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.4fr) minmax(280px, 0.9fr)', gap: '20px', marginTop: '30px' }}>
       
       {/* Left Column */}
       <div style={{ border: '1px solid #eaeaea', borderRadius: '12px', padding: '30px', backgroundColor: '#fff', boxShadow: '0 4px 20px rgba(0,0,0,0.02)' }}>

@@ -3,13 +3,15 @@
 import { useEffect, useState } from "react";
 import { getWatcherStatus } from "@/lib/api";
 import type { WatcherStatus } from "@/lib/types";
+import { demoWatcherStatus } from "@/lib/demoData";
 
-export function WatcherPanel() {
-  const [watcher, setWatcher] = useState<WatcherStatus | null>(null);
+export function WatcherPanel({ demo = false }: { demo?: boolean }) {
+  const [watcher, setWatcher] = useState<WatcherStatus | null>(demo ? demoWatcherStatus : null);
 
   useEffect(() => {
+    if (demo) return;
     getWatcherStatus().then(setWatcher).catch(() => {});
-  }, []);
+  }, [demo]);
 
   return (
     <div style={{ marginTop: '30px' }}>
