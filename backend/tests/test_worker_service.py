@@ -74,6 +74,6 @@ class TestWorkerMatching:
         ]
         results = service.match_workers_for_tasks(tasks)
         assert len(results) == 2
-        for task, worker, reason in results:
+        for _task, worker, reason in results:
             assert isinstance(worker, WorkerProfile)
             assert isinstance(reason, str)

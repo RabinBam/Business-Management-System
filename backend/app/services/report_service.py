@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from app.schemas.report import FinancialSummary, Report
+from app.schemas.report import FinancialSummary, Report, SalesPrediction
 from app.schemas.workflow import WorkflowRead
 from app.services.prediction_service import get_prediction_service
 

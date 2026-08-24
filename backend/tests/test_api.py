@@ -77,3 +77,18 @@ def test_missing_resource_uses_shared_error_envelope() -> None:
             "message": "Workflow 'wf-missing' was not found.",
         },
     }
+
+
+def test_dev_guide_report_and_marketing_endpoints() -> None:
+    created = client.post("/api/v1/workflows", json=_workflow_payload())
+    workflow_id = created.json()["data"]["id"]
+    completed = client.post(f"/api/v1/workflows/{workflow_id}/run")
+    assert completed.json()["data"]["status"] == "COMPLETED"
+
+    report = client.get(f"/api/v1/workflows/{workflow_id}/reports")
+    regenerated = client.post(f"/api/v1/workflows/{workflow_id}/reports/generate")
+    marketing = client.post(f"/api/v1/workflows/{workflow_id}/marketing/generate")
+
+    assert report.status_code == 200
+    assert regenerated.status_code == 200
+    assert marketing.status_code == 200

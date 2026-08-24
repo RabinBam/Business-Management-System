@@ -94,6 +94,7 @@ class TestReportEndpoint:
 
     def test_report_for_existing_workflow(self) -> None:
         from fastapi.testclient import TestClient
+
         from app.main import app
 
         client = TestClient(app)
@@ -117,6 +118,7 @@ class TestReportEndpoint:
 
     def test_report_for_missing_workflow(self) -> None:
         from fastapi.testclient import TestClient
+
         from app.main import app
 
         client = TestClient(app)

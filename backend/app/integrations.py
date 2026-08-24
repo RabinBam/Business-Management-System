@@ -31,12 +31,18 @@ async def _execute_workers(tasks: list[TaskRead]) -> list[WorkerResult]:
     )
 
 
-async def _generate_report(
+async def _generate_report_adapter(
     workflow: WorkflowRead,
     _tasks: list[TaskRead],
     _results: list[WorkerResult],
     _reviews: list[ManagementReview],
 ) -> Report:
+    return await generate_report_for_workflow(workflow)
+
+
+async def generate_report_for_workflow(workflow: WorkflowRead) -> Report:
+    """Run report generation through failure simulation and watcher recovery."""
+
     def operation() -> Report:
         if settings.simulate_report_failure:
             with _simulation_lock:
@@ -53,7 +59,10 @@ async def _generate_report(
     )
 
 
-async def _generate_marketing(workflow: WorkflowRead, report: Report) -> MarketingPlan:
+async def generate_marketing_for_workflow(
+    workflow: WorkflowRead,
+    report: Report,
+) -> MarketingPlan:
     approved_budget = max(0.0, report.financial.remaining_budget)
     approved_context: dict[str, object] = {
         "sales_prediction": report.sales_prediction.model_dump(mode="json"),
@@ -99,8 +108,8 @@ def configure_workflow_integrations(
     workflow_service.configure_collaborators(
         WorkflowCollaborators(
             execute_workers=_execute_workers,
-            generate_report=_generate_report,
-            generate_marketing=_generate_marketing,
+            generate_report=_generate_report_adapter,
+            generate_marketing=generate_marketing_for_workflow,
             record_event=_record_workflow_event,
         )
     )

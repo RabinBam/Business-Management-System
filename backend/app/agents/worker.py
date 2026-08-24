@@ -69,7 +69,8 @@ class WorkerAgent:
             f"Worker {worker.name} matched with role '{worker.role}'.",
             f"Experience: {worker.experience_years} years "
             f"(required: {task.minimum_experience_years}).",
-            f"Skills overlap evaluated against: {', '.join(task.required_skills) or 'none specified'}.",
+            "Skills overlap evaluated against: "
+            f"{', '.join(task.required_skills) or 'none specified'}.",
         ]
 
         return WorkerResult(

@@ -1,5 +1,6 @@
 from fastapi import APIRouter, HTTPException, status
 
+from app.integrations import generate_report_for_workflow
 from app.schemas.common import ApiResponse
 from app.schemas.report import Report
 from app.services.report_service import get_report_service
@@ -9,6 +10,7 @@ router = APIRouter(prefix="/workflows", tags=["reports"])
 
 
 @router.get("/{workflow_id}/report", response_model=ApiResponse[Report])
+@router.get("/{workflow_id}/reports", response_model=ApiResponse[Report])
 async def get_report(workflow_id: str) -> ApiResponse[Report]:
     """Return the financial and prediction report for a workflow.
 
@@ -36,4 +38,19 @@ async def get_report(workflow_id: str) -> ApiResponse[Report]:
         )
 
     report = report_service.generate_report(workflow)
+    return ApiResponse(data=report, message="Report generated")
+
+
+@router.post("/{workflow_id}/reports/generate", response_model=ApiResponse[Report])
+async def generate_report(workflow_id: str) -> ApiResponse[Report]:
+    workflow = get_workflow_service().get(workflow_id)
+    if workflow is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={
+                "code": "WORKFLOW_NOT_FOUND",
+                "message": f"Workflow '{workflow_id}' was not found.",
+            },
+        )
+    report = await generate_report_for_workflow(workflow)
     return ApiResponse(data=report, message="Report generated")
