@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from app.schemas.task import GeneratedTask, TaskRead, TaskStatus
+from app.schemas.task import TaskRead, TaskStatus
 from app.schemas.worker import WorkerProfile, WorkerResult
 from app.services.worker_service import get_worker_service
 
