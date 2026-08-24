@@ -62,7 +62,8 @@ export function normalizeFinancialRows(rawRows: Record<string, unknown>[]): Fina
 export async function parseFinancialFile(file: File): Promise<FinancialDataRow[]> {
   const extension = file.name.split(".").pop()?.toLowerCase();
   if (extension !== "csv" && extension !== "xlsx") throw new Error("Unsupported file type. Choose a CSV or XLSX file.");
-  const workbook = XLSX.read(await file.arrayBuffer(), { type: "array" });
+  // Keep CSV period labels such as "2026-01" as text instead of Excel date serials.
+  const workbook = XLSX.read(await file.arrayBuffer(), { type: "array", raw: true });
   const firstSheet = workbook.SheetNames[0];
   if (!firstSheet) throw new Error("This workbook does not contain a worksheet.");
   const rawRows = XLSX.utils.sheet_to_json<Record<string, unknown>>(workbook.Sheets[firstSheet], { defval: "", raw: true });
