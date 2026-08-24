@@ -7,4 +7,3 @@ export default async function ReportPage({
   const { id } = await params;
   return <ReportView id={id} />;
 }
-6

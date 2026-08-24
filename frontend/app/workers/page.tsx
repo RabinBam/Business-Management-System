@@ -12,4 +12,3 @@ export default async function WorkersPage({
     </AppShell>
   );
 }
-44
