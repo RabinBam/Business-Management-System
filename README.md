@@ -1,6 +1,6 @@
 # AegisFlow AI
 
-A shared two-day MVP foundation for a five-person team building an AI-assisted business workflow system with Next.js, React, FastAPI, and Docker.
+A complete AI-assisted business workflow product built with Next.js, React, FastAPI, SQLite, and Docker.
 
 ## Start here
 
@@ -13,9 +13,11 @@ A shared two-day MVP foundation for a five-person team building an AI-assisted b
 
 3. Open the command center at <http://localhost:3000> and API documentation at <http://localhost:8000/docs>.
 
-The default stack uses in-memory stores and a deterministic mock AI provider, so every developer can run the complete workflow without credentials. The integrated path covers objective segmentation, task refinement, worker execution, management review, reports, marketing, watcher events, and the final executive summary. Restarting the backend clears runtime data; durable storage and the real AI provider remain opt-in extension points.
+The default stack uses durable SQLite storage and a deterministic mock AI provider, so every developer can run the complete workflow without credentials. The integrated path covers objective segmentation, task refinement, worker matching and execution, bounded management revisions, cost-aware reports, marketing, watcher events, and the final executive summary. Docker stores application state in the `backend_data` volume, so backend restarts do not erase workflows.
 
-The checked-in configuration does **not** use an OpenAI key. OpenAI calls are enabled only when `AI_PROVIDER=openai`, `AI_PRIMARY_MODEL`, and `OPENAI_API_KEY` are set deliberately. See [the DEV implementation status](docs/DEV_STATUS.md) for the tested handoffs and current MVP limits.
+The checked-in configuration does **not** use an OpenAI key. OpenAI calls are enabled only when `AI_PROVIDER=openai`, `AI_PRIMARY_MODEL`, and `OPENAI_API_KEY` are set deliberately. See [the product implementation status](docs/DEV_STATUS.md) for the tested handoffs and deployment boundary.
+
+For shared or production deployments, set a strong `ADMIN_API_KEY`, restrict `TRUSTED_HOSTS` and `FRONTEND_ORIGIN`, provide secrets through the deployment platform, and place the app behind your organization’s identity-aware proxy. Never commit provider keys to Git.
 
 ## Local development
 
@@ -54,4 +56,6 @@ cd ..
 docker compose config --quiet
 docker compose build
 ```
+
+The backend acceptance suite also verifies persisted restart recovery, revision re-execution, live dashboard/workforce contracts, cost propagation, and request security controls. The frontend dependency audit is enforced in CI.
 
