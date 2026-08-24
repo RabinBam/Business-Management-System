@@ -205,11 +205,60 @@ button, a { -webkit-tap-highlight-color: transparent; }
 .decisionFeed time { white-space: nowrap; }.decisionFeed p { margin: 8px 0; color: #29282d; font-size: .76rem; line-height: 1.5; }.decisionFeed a { font-size: .7rem; font-weight: 800; }
 .decisionFeed button { display: inline-flex; align-items: center; gap: 5px; margin: 4px 6px 0 0; border: 1px solid var(--cc-border); border-radius: 6px; background: white; padding: 6px 10px; font-size: .64rem; }
 .decisionFeed div button:first-child { border-color: #e1e0e4; background: #e9e8eb; }
+/* Mobile Menu Defaults */
+.hamburger-btn { display: none; background: transparent; border: 0; color: inherit; cursor: pointer; padding: 4px; }
+.mobile-overlay { display: none; }
+.headerLeft { display: flex; align-items: center; gap: 12px; }
 
 @media (max-width: 1100px) {
-  .commandCenter { grid-template-columns: 210px 1fr; }.commandSidebar nav a { padding-left: 20px; }.profileBlock { padding-left: 20px; }.commandLayout { grid-template-columns: 1fr; }.decisionPanel { grid-row: auto; }.decisionFeed { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }.decisionFeed article { border-left: 2px solid #d8d6dd; }
+  .commandCenter { display: block; }
+  .commandLayout { grid-template-columns: 1fr; }
+  .decisionPanel { grid-row: auto; }
+  .decisionFeed { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .decisionFeed article { border-left: 2px solid #d8d6dd; }
+  
+  /* Mobile Sidebar Logic */
+  .hamburger-btn { display: flex; align-items: center; justify-content: center; color: #17171b; }
+  .commandSidebar { 
+    position: fixed; 
+    top: 0; 
+    left: -300px; 
+    width: 280px; 
+    height: 100vh; 
+    z-index: 100; 
+    transition: left 0.3s ease; 
+    padding: 38px 0;
+  }
+  .commandSidebar.open { left: 0; }
+  .mobile-overlay {
+    display: block;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0,0,0,0.4);
+    z-index: 90;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+  }
+  .commandCenter.menu-open .mobile-overlay {
+    opacity: 1;
+    pointer-events: auto;
+  }
 }
+
 @media (max-width: 760px) {
-  .commandCenter { display: block; }.commandSidebar { position: static; height: auto; padding: 16px 0 0; }.profileBlock { padding: 0 18px 16px; }.commandSidebar nav { display: flex; overflow-x: auto; padding: 0 12px 12px; }.commandSidebar nav a { flex: 0 0 auto; min-height: 42px; margin: 0; padding: 0 14px; border-radius: 20px; }.commandHeader { height: 58px; padding: 0 18px; }.healthPill { font-size: 0; }.healthPill b { font-size: .68rem; }.commandContent { padding: 24px 16px; }.commandTitleRow { align-items: flex-start; }.insightButton { padding: 11px; font-size: 0; }.metricGrid { grid-template-columns: 1fr; }.metricCard { min-height: 165px; }.commandCenter .formRow { grid-template-columns: 1fr; }.decisionFeed { grid-template-columns: 1fr; }
+  .commandHeader { height: 58px; padding: 0 18px; }
+  .healthPill { font-size: 0; }
+  .healthPill b { font-size: .68rem; }
+  .commandContent { padding: 24px 16px; }
+  .commandTitleRow { align-items: flex-start; }
+  .insightButton { padding: 11px; font-size: 0; }
+  .metricGrid { grid-template-columns: 1fr; }
+  .metricCard { min-height: 165px; }
+  .commandCenter .formRow { grid-template-columns: 1fr; }
+  .decisionFeed { grid-template-columns: 1fr; }
 }
 

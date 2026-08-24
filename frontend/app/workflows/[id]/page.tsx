@@ -1,9 +1,9 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { TaskCard } from "@/components/TaskCard";
 import { WorkflowPipeline } from "@/components/WorkflowPipeline";
 import { getTasks, getWorkflow } from "@/lib/api";
+import { SidebarLayout } from "@/components/SidebarLayout";
 
 export const dynamic = "force-dynamic";
 
@@ -18,15 +18,7 @@ export default async function WorkflowPage({ params }: { params: Promise<{ id: s
   const [workflow, tasks] = result;
 
   return (
-    <main className="shell">
-      <nav className="topbar">
-        <Link className="brand" href="/">
-          <span className="brandMark">AF</span>
-          <span>AegisFlow</span>
-        </Link>
-        <Link href="/watcher">Watcher</Link>
-      </nav>
-
+    <SidebarLayout active="workflow">
       <header className="workflowHeader">
         <div>
           <div className="eyebrow">Workflow {workflow.id}</div>
@@ -59,6 +51,6 @@ export default async function WorkflowPage({ params }: { params: Promise<{ id: s
           </div>
         )}
       </section>
-    </main>
+    </SidebarLayout>
   );
 }
