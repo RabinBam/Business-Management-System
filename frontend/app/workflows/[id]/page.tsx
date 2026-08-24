@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { TaskCard } from "@/components/TaskCard";
@@ -33,6 +34,11 @@ export default async function WorkflowPage({ params }: { params: Promise<{ id: s
       </header>
 
       <WorkflowPipeline status={workflow.status} />
+      <nav className="contextLinks" aria-label="Workflow results">
+        <Link href={`/reports/${workflow.id}`}>Financial report →</Link>
+        <Link href={`/marketing/${workflow.id}`}>Marketing plan →</Link>
+        <Link href={`/executive-summary/${workflow.id}`}>Executive summary →</Link>
+      </nav>
 
       <section className="taskSection">
         <div className="sectionHeading">

@@ -1,30 +1,121 @@
+"use client";
+
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import { AppShell } from "./AppShell";
-import { EmptyState } from "./AsyncStates";
+import { EmptyState, ErrorState, LoadingSkeleton } from "./AsyncStates";
 import { ProgressBar } from "./charts/ProgressBar";
 import {
   demoExecutiveSummary,
   demoReport,
   demoWatcherStatus,
 } from "@/lib/demoData";
+import { getWorkflow } from "@/lib/api";
 import { formatNpr } from "@/lib/formatters";
-export function ExecutiveSummaryView({ id }: { id: string }) {
-  if (id !== "demo")
+import type { Workflow } from "@/lib/types";
+
+function LiveExecutiveSummary({ id }: { id: string }) {
+  const [workflow, setWorkflow] = useState<Workflow | null>(null);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    let active = true;
+    getWorkflow(id)
+      .then((result) => {
+        if (active) setWorkflow(result);
+      })
+      .catch((reason) => {
+        if (active) {
+          setError(
+            reason instanceof Error
+              ? reason.message
+              : "Unable to load the executive summary.",
+          );
+        }
+      });
+    return () => {
+      active = false;
+    };
+  }, [id]);
+
+  if (error)
+    return (
+      <AppShell mode="real">
+        <ErrorState message={error} />
+      </AppShell>
+    );
+  if (!workflow)
+    return (
+      <AppShell mode="real">
+        <LoadingSkeleton rows={5} />
+      </AppShell>
+    );
+  const summary = workflow.executive_summary;
+  if (!summary)
     return (
       <AppShell mode="real">
         <header className="pageTitle">
           <div>
             <span>Executive intelligence</span>
-            <h1>Executive Summary</h1>
-            <p>Consolidated business performance and decision information.</p>
+            <h1>{workflow.title}</h1>
+            <p>Workflow status: {workflow.status.replaceAll("_", " ")}</p>
           </div>
         </header>
         <EmptyState
           title="Executive summary unavailable"
-          message="A consolidated executive-summary API contract is required for real workflow data."
+          message="The summary appears after management completes the final review."
         />
       </AppShell>
     );
+
+  return (
+    <AppShell mode="real">
+      <header className="pageTitle">
+        <div>
+          <span>Completed workflow</span>
+          <h1>{workflow.title}</h1>
+          <p>{summary.overview}</p>
+        </div>
+        <div className="summaryActions">
+          <Link href={`/workflows/${workflow.id}`}>View workflow</Link>
+          <Link href="/">Start New Workflow</Link>
+        </div>
+      </header>
+      <section className="executiveKpis">
+        <article><span>Status</span><strong>{workflow.status}</strong></article>
+        <article><span>Approved budget</span><strong>{formatNpr(workflow.budget)}</strong></article>
+        <article><span>Deadline</span><strong>{workflow.deadline}</strong></article>
+      </section>
+      <div className="executiveGrid">
+        <section className="summaryPanel">
+          <header><h2>Major Work Completed</h2></header>
+          <ol>{summary.major_work_completed.map((item) => <li key={item}>{item}</li>)}</ol>
+        </section>
+        <section className="summaryPanel">
+          <header><h2>Business Results</h2></header>
+          <dl>
+            <div><dt>Financial summary</dt><dd>{summary.financial_summary}</dd></div>
+            <div><dt>Sales prediction</dt><dd>{summary.sales_prediction}</dd></div>
+            <div><dt>Marketing strategy</dt><dd>{summary.marketing_strategy}</dd></div>
+          </dl>
+        </section>
+        <section className="summaryPanel recommendationsPanel">
+          <header><h2>Management Recommendation</h2></header>
+          <p>{summary.management_recommendation}</p>
+          <h3>Major Risks</h3>
+          {summary.major_risks.length ? (
+            <ul>{summary.major_risks.map((risk) => <li key={risk}>{risk}</li>)}</ul>
+          ) : (
+            <p>No major risks were returned.</p>
+          )}
+        </section>
+      </div>
+    </AppShell>
+  );
+}
+
+export function ExecutiveSummaryView({ id }: { id: string }) {
+  if (id !== "demo") return <LiveExecutiveSummary id={id} />;
   const summary = demoExecutiveSummary;
   return (
     <AppShell mode="demo">

@@ -5,7 +5,28 @@ export type WorkflowStatus =
 export type TaskStatus = "PENDING" | "RUNNING" | "COMPLETED" | "FAILED";
 
 export interface WorkflowCreate { title: string; objective: string; budget: number; deadline: string; }
-export interface Workflow extends WorkflowCreate { id: string; status: WorkflowStatus; current_stage: string; created_at: string; }
+export interface ExecutiveSummary {
+  objective: string;
+  overview: string;
+  major_work_completed: string[];
+  financial_summary: string;
+  sales_prediction: string;
+  marketing_strategy: string;
+  major_risks: string[];
+  management_recommendation: string;
+}
+export interface WorkflowFailure { code: string; message: string; failed_stage: WorkflowStatus; }
+export interface Workflow extends WorkflowCreate {
+  id: string;
+  status: WorkflowStatus;
+  current_stage: string;
+  created_at: string;
+  updated_at?: string;
+  started_at?: string | null;
+  completed_at?: string | null;
+  failure?: WorkflowFailure | null;
+  executive_summary?: ExecutiveSummary | null;
+}
 
 export interface Task {
   id: string;
