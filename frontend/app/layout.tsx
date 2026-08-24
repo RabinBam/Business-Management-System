@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 
@@ -16,3 +17,25 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
   );
 }
 
+=======
+import type { Metadata } from "next";
+import type { ReactNode } from "react";
+
+import "./globals.css";
+import "./prototype.css";
+
+export const metadata: Metadata = {
+  title: "Byapari",
+  description: "AI-assisted command center for accountable business workflows.",
+};
+
+export default function RootLayout({
+  children,
+}: Readonly<{ children: ReactNode }>) {
+  return (
+    <html lang="en">
+      <body>{children}</body>
+    </html>
+  );
+}
+>>>>>>> 3ffc1b091eeeb5d0c2ea50affbb8c90e7a14e16e

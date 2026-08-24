@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
@@ -62,3 +63,14 @@ export default async function WorkflowPage({ params }: { params: Promise<{ id: s
     </main>
   );
 }
+=======
+import { WorkflowView } from "@/components/WorkflowView";
+export default async function WorkflowPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = await params;
+  return <WorkflowView id={id} />;
+}
+>>>>>>> 3ffc1b091eeeb5d0c2ea50affbb8c90e7a14e16e

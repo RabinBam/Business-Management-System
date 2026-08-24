@@ -1,0 +1,1679 @@
+.topbarNew>span.demoMode {
+    background: var(--blue-soft);
+    color: var(--blue)
+}
+
+.topbarNew>span.demoMode i {
+    background: var(--blue)
+}
+
+.dashboardKpis {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 14px;
+    margin-bottom: 20px
+}
+
+.dashboardKpis article {
+    padding: 18px;
+    border: 1px solid var(--border);
+    border-radius: 13px;
+    background: #fff;
+    box-shadow: var(--shadow)
+}
+
+.dashboardKpis span {
+    color: var(--muted);
+    font-size: .66rem;
+    font-weight: 800;
+    text-transform: uppercase
+}
+
+.dashboardKpis strong {
+    display: block;
+    margin: 9px 0 5px;
+    font-size: 1.35rem
+}
+
+.dashboardKpis small {
+    color: var(--muted);
+    font-size: .67rem
+}
+
+.commandBoard {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 320px;
+    gap: 20px
+}
+
+.commandPrimary {
+    display: grid;
+    gap: 20px
+}
+
+.aiDecisionPanel {
+    align-self: start;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: #fff;
+    box-shadow: var(--shadow)
+}
+
+.aiDecisionPanel>header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 21px;
+    border-bottom: 1px solid var(--border);
+    color: var(--blue)
+}
+
+.aiDecisionPanel h2 {
+    margin: 0;
+    color: var(--text);
+    font-size: 1.05rem
+}
+
+.aiDecisionPanel>div {
+    padding: 18px
+}
+
+.aiDecisionPanel article {
+    position: relative;
+    padding: 0 0 21px 20px;
+    border-left: 2px solid var(--border)
+}
+
+.aiDecisionPanel article.active {
+    border-left-color: var(--blue)
+}
+
+.aiDecisionPanel article::before {
+    content: "";
+    position: absolute;
+    left: -5px;
+    top: 2px;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #cbd5e1
+}
+
+.aiDecisionPanel article.active::before {
+    background: var(--blue)
+}
+
+.aiDecisionPanel article header {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    font-size: .68rem
+}
+
+.aiDecisionPanel article time {
+    color: var(--muted);
+    white-space: nowrap
+}
+
+.aiDecisionPanel article p {
+    margin: 7px 0;
+    color: var(--muted);
+    font-size: .73rem;
+    line-height: 1.5
+}
+
+.aiDecisionPanel>footer {
+    padding: 17px 20px;
+    background: #f8fafc
+}
+
+.aiDecisionPanel>footer span {
+    color: var(--blue);
+    font-size: .65rem;
+    font-weight: 800;
+    text-transform: uppercase
+}
+
+.aiDecisionPanel>footer p {
+    margin: 6px 0 0;
+    color: var(--muted);
+    font-size: .7rem;
+    line-height: 1.45
+}
+
+.overviewCard li.passed i {
+    background: var(--blue);
+    color: #fff
+}
+
+.overviewCard li.current i {
+    box-shadow: 0 0 0 5px rgb(37 99 235 / 13%)
+}
+
+.reportGrid {
+    grid-template-columns: minmax(250px, .55fr) minmax(0, 1.45fr)
+}
+
+.utilizationCard {
+    padding: 24px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: #fff;
+    box-shadow: var(--shadow)
+}
+
+.utilizationCard>span {
+    color: var(--muted);
+    font-size: .68rem;
+    font-weight: 800;
+    text-transform: uppercase
+}
+
+.reportDonut {
+    width: 185px;
+    height: 185px;
+    display: grid;
+    place-items: center;
+    margin: 25px auto;
+    border-radius: 50%;
+    background: conic-gradient(var(--blue) var(--usage), #e7edf5 0)
+}
+
+.reportDonut::before {
+    content: "";
+    grid-area: 1/1;
+    width: 130px;
+    height: 130px;
+    border-radius: 50%;
+    background: #fff
+}
+
+.reportDonut>div {
+    z-index: 1;
+    grid-area: 1/1;
+    display: grid;
+    text-align: center
+}
+
+.reportDonut strong {
+    font-size: 2rem
+}
+
+.reportDonut small {
+    color: var(--muted)
+}
+
+.utilizationCard dl {
+    display: grid;
+    gap: 10px;
+    margin: 0
+}
+
+.utilizationCard dl div {
+    padding: 11px;
+    border-radius: 8px;
+    background: var(--bg)
+}
+
+.utilizationCard dt {
+    color: var(--muted);
+    font-size: .65rem
+}
+
+.utilizationCard dd {
+    margin: 4px 0 0;
+    font-weight: 800
+}
+
+.reportInsights {
+    display: grid;
+    grid-template-columns: 1fr 1.4fr;
+    gap: 24px;
+    margin-top: 20px
+}
+
+.reportInsights section+section {
+    margin: 0;
+    padding: 0 0 0 24px;
+    border-top: 0;
+    border-left: 1px solid var(--border)
+}
+
+.secondaryButton {
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    background: #fff;
+    padding: 11px 16px;
+    color: var(--text);
+    font-weight: 750
+}
+
+.allocationList article {
+    grid-template-columns: 36px 1fr 150px;
+    gap: 14px
+}
+
+.channelIcon {
+    width: 32px;
+    height: 32px;
+    display: grid;
+    place-items: center;
+    border-radius: 8px;
+    background: var(--blue-soft);
+    color: var(--blue);
+    font-size: .7rem;
+    font-weight: 900
+}
+
+.healthGrid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 14px;
+    margin-top: 18px
+}
+
+.healthGrid article {
+    padding: 18px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: #fff
+}
+
+.healthGrid span {
+    display: block;
+    color: var(--muted);
+    font-size: .68rem
+}
+
+.healthGrid strong {
+    display: block;
+    margin: 18px 0 8px
+}
+
+.healthGrid small {
+    padding: 4px 6px;
+    border-radius: 5px;
+    font-size: .62rem;
+    text-transform: capitalize
+}
+
+.healthGrid small.healthy {
+    background: var(--green-soft);
+    color: var(--green)
+}
+
+.healthGrid small.warning {
+    background: #fff4df;
+    color: var(--amber)
+}
+
+@media(max-width:1050px) {
+
+    .commandBoard,
+    .reportGrid {
+        grid-template-columns: 1fr
+    }
+
+    .dashboardKpis,
+    .healthGrid {
+        grid-template-columns: 1fr 1fr
+    }
+}
+
+@media(max-width:720px) {
+
+    .dashboardKpis,
+    .healthGrid,
+    .reportInsights {
+        grid-template-columns: 1fr
+    }
+
+    .reportInsights section+section {
+        padding: 18px 0 0;
+        border-left: 0;
+        border-top: 1px solid var(--border)
+    }
+
+    .allocationList article {
+        grid-template-columns: 36px 1fr
+    }
+
+    .allocationList input {
+        grid-column: 1/-1
+    }
+}
+
+.appShell {
+    --navy: #131b2e;
+    --blue: #6366f1;
+    --blue-soft: #eef0ff;
+    --bg: #fcf8fa;
+    --border: #c6c6cd;
+    --green: #10b981
+}
+
+.pageCanvas {
+    max-width: 1440px;
+    margin: 0 auto
+}
+
+.commandKpis {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    margin-bottom: 20px
+}
+
+.commandKpis article {
+    min-height: 180px;
+    padding: 22px;
+    border: 1px solid var(--border);
+    border-radius: 15px;
+    background: #fff;
+    box-shadow: 0 10px 26px rgb(19 27 46 / 6%)
+}
+
+.commandKpis header {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    color: var(--muted);
+    font-size: .7rem;
+    font-weight: 800;
+    text-transform: uppercase
+}
+
+.commandKpis header small {
+    padding: 4px 7px;
+    border-radius: 6px;
+    background: #eef0ff;
+    color: #6366f1
+}
+
+.commandKpis>article>strong {
+    display: block;
+    margin: 18px 0 10px;
+    font-size: 1.65rem
+}
+
+.commandKpis article>p {
+    color: var(--muted);
+    font-size: .7rem
+}
+
+.miniChart {
+    height: 62px;
+    margin-top: 8px
+}
+
+.sparkline {
+    height: 68px;
+    margin-top: 8px
+}
+
+.numericProgress {
+    height: 8px;
+    overflow: hidden;
+    border-radius: 999px;
+    background: #e9e8ed
+}
+
+.numericProgress i {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: #6366f1
+}
+
+.numericProgress i.green {
+    background: #10b981
+}
+
+.numericProgress i.amber {
+    background: #f59e0b
+}
+
+.directoryBadge {
+    padding: 9px 12px;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background: #fff;
+    color: var(--muted);
+    font-size: .72rem;
+    font-weight: 800
+}
+
+.workerToolbar {
+    display: flex;
+    justify-content: space-between;
+    gap: 18px;
+    margin-bottom: 20px;
+    padding: 7px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: #f1eef1
+}
+
+.workerToolbar>div {
+    display: flex;
+    gap: 4px
+}
+
+.workerToolbar button {
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    padding: 10px 15px;
+    color: var(--muted);
+    font-weight: 750
+}
+
+.workerToolbar button.active {
+    background: #fff;
+    color: var(--text);
+    box-shadow: 0 4px 10px rgb(19 27 46 / 6%)
+}
+
+.workerToolbar input {
+    min-width: 300px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: #fff;
+    padding: 9px 12px
+}
+
+.workerBento {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 18px
+}
+
+.workerCard {
+    padding: 22px;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    background: #fff;
+    box-shadow: 0 10px 25px rgb(19 27 46 / 5%)
+}
+
+.workerCard>header {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 12px;
+    align-items: start
+}
+
+.workerAvatar {
+    width: 46px;
+    height: 46px;
+    display: grid;
+    place-items: center;
+    border-radius: 11px;
+    background: #131b2e;
+    color: #fff;
+    font-weight: 850
+}
+
+.workerCard h2 {
+    margin: 1px 0 4px;
+    font-size: 1.05rem
+}
+
+.workerCard header p {
+    margin: 0;
+    color: var(--muted);
+    font-size: .72rem
+}
+
+.workerCard header small {
+    padding: 5px 7px;
+    border-radius: 6px;
+    font-size: .58rem;
+    font-weight: 900
+}
+
+.workerCard header small.available {
+    background: #e8faf3;
+    color: #059669
+}
+
+.workerCard header small.busy,
+.workerCard header small.on_task {
+    background: #eef0ff;
+    color: #6366f1
+}
+
+.workerCard header small.offline {
+    background: #edf0f4;
+    color: #667085
+}
+
+.workerMeta {
+    display: flex;
+    justify-content: space-between;
+    margin: 18px 0 12px;
+    color: var(--muted);
+    font-size: .68rem
+}
+
+.workerCard dl {
+    margin: 0;
+    border-top: 1px solid var(--border)
+}
+
+.workerCard dl div {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 8px 0;
+    border-bottom: 1px solid #e5e5ea;
+    font-size: .68rem
+}
+
+.workerCard dt {
+    color: var(--muted)
+}
+
+.workerCard dd {
+    margin: 0;
+    text-align: right;
+    font-weight: 700
+}
+
+.workerSkills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    margin: 14px 0
+}
+
+.workerSkills span {
+    padding: 5px 7px;
+    border-radius: 5px;
+    background: #eef0ff;
+    color: #6366f1;
+    font-size: .62rem
+}
+
+.workerCard footer>div,
+.taskProgress>div {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 7px;
+    font-size: .7rem
+}
+
+.completionBadge {
+    display: grid;
+    text-align: right
+}
+
+.completionBadge strong {
+    font-size: 2.5rem
+}
+
+.completionBadge span {
+    color: var(--muted);
+    font-size: .7rem;
+    font-weight: 800
+}
+
+.workflowExecutionGrid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 300px;
+    gap: 18px
+}
+
+.workflowExecutionGrid .contentSection {
+    margin-top: 22px
+}
+
+.workflowExecutionGrid .taskGridNew {
+    grid-template-columns: 1fr 1fr
+}
+
+.managementPanel {
+    align-self: start;
+    margin-top: 22px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    background: #fff;
+    box-shadow: var(--shadow)
+}
+
+.managementPanel>header {
+    padding: 22px;
+    border-bottom: 1px solid var(--border)
+}
+
+.managementPanel>header span {
+    color: #6366f1
+}
+
+.managementPanel h2 {
+    margin: 7px 0
+}
+
+.managementPanel p {
+    color: var(--muted);
+    font-size: .72rem;
+    line-height: 1.5
+}
+
+.managementPanel article {
+    padding: 17px 20px;
+    border-bottom: 1px solid #e5e5ea
+}
+
+.managementPanel article>strong {
+    color: #6366f1;
+    font-size: .65rem
+}
+
+.managementPanel h3 {
+    margin: 7px 0;
+    font-size: .86rem
+}
+
+.taskProgress {
+    margin-top: 16px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border)
+}
+
+.forecastChart {
+    height: 330px;
+    margin-top: 18px
+}
+
+.donutChart {
+    position: relative;
+    height: 215px
+}
+
+.donutChart>div:last-child {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-content: center;
+    text-align: center;
+    pointer-events: none
+}
+
+.donutChart strong {
+    font-size: 2rem
+}
+
+.donutChart span {
+    color: var(--muted);
+    font-size: .68rem
+}
+
+.categoryBreakdown {
+    margin-top: 20px;
+    padding-top: 15px;
+    border-top: 1px solid var(--border)
+}
+
+.categoryBreakdown h3 {
+    font-size: .8rem;
+    text-transform: uppercase
+}
+
+.categoryBreakdown article {
+    margin-top: 13px
+}
+
+.categoryBreakdown article>div {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 6px;
+    font-size: .68rem
+}
+
+.reportActions,
+.summaryActions {
+    display: flex;
+    gap: 9px
+}
+
+.reportActions button,
+.summaryActions button,
+.summaryActions a {
+    white-space: nowrap
+}
+
+.modalBackdrop {
+    position: fixed;
+    z-index: 50;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    padding: 18px;
+    background: rgb(15 23 42 / 48%)
+}
+
+.financeModal {
+    width: min(620px, 100%);
+    max-height: 90vh;
+    overflow: auto;
+    border-radius: 16px;
+    background: #fff;
+    box-shadow: 0 30px 80px rgb(0 0 0 / 25%)
+}
+
+.financeModal>header {
+    display: flex;
+    justify-content: space-between;
+    padding: 22px;
+    border-bottom: 1px solid var(--border)
+}
+
+.financeModal header span {
+    color: #6366f1;
+    font-size: .65rem;
+    text-transform: uppercase
+}
+
+.financeModal h2 {
+    margin: 5px 0
+}
+
+.financeModal header button {
+    border: 0;
+    background: transparent;
+    font-size: 1.5rem
+}
+
+.financeModal>nav {
+    display: flex;
+    gap: 6px;
+    padding: 18px
+}
+
+.financeModal nav button {
+    flex: 1;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: #fff;
+    padding: 10px
+}
+
+.financeModal nav button.active {
+    background: #eef0ff;
+    color: #6366f1
+}
+
+.sampleDataset,
+.fileDrop,
+.manualFinance,
+.integrationNotice {
+    margin: 0 18px;
+    padding: 20px;
+    border: 1px solid var(--border);
+    border-radius: 11px;
+    background: #f8f6f7
+}
+
+.fileDrop {
+    display: grid;
+    gap: 10px
+}
+
+.fileDrop small,
+.sampleDataset p,
+.integrationNotice p {
+    color: var(--muted);
+    font-size: .72rem
+}
+
+.manualFinance {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px
+}
+
+.manualFinance label {
+    display: grid;
+    gap: 6px;
+    font-size: .7rem;
+    font-weight: 700
+}
+
+.manualFinance input {
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    padding: 9px
+}
+
+.prototypeNote {
+    margin: 12px 20px;
+    color: #6366f1;
+    font-size: .68rem
+}
+
+.financeModal>footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    padding: 18px;
+    border-top: 1px solid var(--border)
+}
+
+.executiveKpis {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 15px
+}
+
+.executiveKpis article {
+    padding: 21px;
+    border: 1px solid var(--border);
+    border-left: 4px solid #6366f1;
+    border-radius: 13px;
+    background: #fff
+}
+
+.executiveKpis span {
+    color: var(--muted);
+    font-size: .65rem;
+    text-transform: uppercase
+}
+
+.executiveKpis strong {
+    display: block;
+    margin: 12px 0 6px;
+    font-size: 1.7rem
+}
+
+.executiveKpis small {
+    color: #10b981
+}
+
+.executiveGrid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 18px;
+    margin-top: 20px
+}
+
+.summaryPanel {
+    padding: 22px;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    background: #fff
+}
+
+.summaryPanel>header {
+    display: flex;
+    justify-content: space-between
+}
+
+.summaryPanel h2 {
+    margin: 0;
+    font-size: 1rem
+}
+
+.summaryPanel header span {
+    color: var(--muted);
+    font-size: .68rem
+}
+
+.summaryPanel>article {
+    margin-top: 18px
+}
+
+.summaryPanel>article>div {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 7px;
+    font-size: .72rem
+}
+
+.summaryPanel dl {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px
+}
+
+.summaryPanel dl div {
+    padding: 12px;
+    border-radius: 8px;
+    background: #f6f3f5
+}
+
+.summaryPanel dt {
+    color: var(--muted);
+    font-size: .65rem
+}
+
+.summaryPanel dd {
+    margin: 5px 0 0;
+    font-weight: 800
+}
+
+.recommendationsPanel {
+    grid-column: 1/-1
+}
+
+.recommendationsPanel li {
+    margin: 8px 0;
+    color: var(--muted)
+}
+
+@media(max-width:1150px) {
+    .workerBento {
+        grid-template-columns: 1fr 1fr
+    }
+
+    .workflowExecutionGrid {
+        grid-template-columns: 1fr
+    }
+
+    .managementPanel {
+        margin-top: 0
+    }
+}
+
+@media(max-width:850px) {
+
+    .commandKpis,
+    .executiveKpis {
+        grid-template-columns: 1fr 1fr
+    }
+
+    .workerToolbar {
+        align-items: stretch;
+        flex-direction: column
+    }
+
+    .workerToolbar input {
+        min-width: 0
+    }
+
+    .executiveGrid {
+        grid-template-columns: 1fr
+    }
+
+    .recommendationsPanel {
+        grid-column: auto
+    }
+}
+
+@media(max-width:620px) {
+
+    .commandKpis,
+    .workerBento,
+    .executiveKpis {
+        grid-template-columns: 1fr
+    }
+
+    .workerToolbar>div {
+        overflow-x: auto
+    }
+
+    .workerCard>header {
+        grid-template-columns: auto 1fr
+    }
+
+    .workerCard header small {
+        grid-column: 2
+    }
+
+    .workflowExecutionGrid .taskGridNew {
+        grid-template-columns: 1fr
+    }
+
+    .reportActions,
+    .summaryActions {
+        flex-direction: column
+    }
+
+    .manualFinance {
+        grid-template-columns: 1fr
+    }
+}
+
+.datasetBanner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 18px;
+    margin-bottom: 16px;
+    padding: 13px 16px;
+    border: 1px solid #c8c7f4;
+    border-radius: 11px;
+    background: #f4f4ff
+}
+
+.datasetBanner div {
+    display: grid;
+    gap: 3px
+}
+
+.datasetBanner span,
+.datasetBanner small {
+    color: var(--muted);
+    font-size: .68rem
+}
+
+.reportKpis article small {
+    display: block;
+    margin-top: 6px;
+    color: var(--muted);
+    font-size: .65rem
+}
+
+.reportChartGrid {
+    display: grid;
+    grid-template-columns: 1.35fr .65fr;
+    gap: 20px;
+    margin-top: 20px
+}
+
+.dataChart {
+    height: 300px;
+    margin-top: 14px
+}
+
+.dataChart.small {
+    height: 230px
+}
+
+.demoForecast {
+    margin-top: 20px
+}
+
+.forecastNotice {
+    margin-top: 20px;
+    padding: 17px;
+    border: 1px dashed #aaa8e8;
+    border-radius: 11px;
+    background: #f8f8ff;
+    color: #5551b8;
+    font-size: .75rem
+}
+
+.filePanel {
+    display: grid;
+    gap: 13px;
+    margin: 0 18px
+}
+
+.filePanel .fileDrop {
+    margin: 0
+}
+
+.fileFacts {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr;
+    gap: 8px;
+    margin: 0
+}
+
+.fileFacts div {
+    min-width: 0;
+    padding: 10px;
+    border-radius: 8px;
+    background: #f5f3f5
+}
+
+.fileFacts dt {
+    color: var(--muted);
+    font-size: .62rem
+}
+
+.fileFacts dd {
+    overflow: hidden;
+    margin: 4px 0 0;
+    text-overflow: ellipsis;
+    font-size: .72rem;
+    font-weight: 800
+}
+
+.fileMessage {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+    padding: 10px;
+    border-radius: 8px;
+    font-size: .72rem
+}
+
+.fileMessage.error {
+    background: #fff0f0;
+    color: #b42318
+}
+
+.fileMessage.success {
+    background: #eafaf3;
+    color: #067647
+}
+
+.fileMessage.parsing {
+    background: #eef0ff;
+    color: #514dc7
+}
+
+.fileMessage i {
+    width: 13px;
+    height: 13px;
+    border: 2px solid currentColor;
+    border-right-color: transparent;
+    border-radius: 50%;
+    animation: finance-spin .7s linear infinite
+}
+
+.localOnly {
+    margin: 0;
+    color: #067647;
+    font-size: .68rem
+}
+
+.filePanel>.primaryButton,
+.sampleDataset>.primaryButton,
+.manualFinance>.primaryButton {
+    justify-self: start
+}
+
+.primaryButton:disabled {
+    cursor: not-allowed;
+    opacity: .5
+}
+
+.manualFinance .fileMessage,
+.manualFinance>.primaryButton {
+    grid-column: 1/-1
+}
+
+@keyframes finance-spin {
+    to {
+        transform: rotate(360deg)
+    }
+}
+
+@media(max-width:900px) {
+    .reportChartGrid {
+        grid-template-columns: 1fr
+    }
+}
+
+@media(max-width:620px) {
+    .datasetBanner {
+        align-items: flex-start;
+        flex-direction: column
+    }
+
+    .fileFacts {
+        grid-template-columns: 1fr
+    }
+
+    .dataChart {
+        height: 250px
+    }
+}
+
+/* Phone layout: keep every dashboard surface inside the viewport. */
+@media(max-width:720px) {
+
+    html,
+    body {
+        max-width: 100%;
+        overflow-x: hidden
+    }
+
+    .appShell,
+    .appBody,
+    .pageCanvas {
+        width: 100%;
+        min-width: 0
+    }
+
+    .sidebar {
+        position: sticky;
+        z-index: 20;
+        top: 0;
+        padding: 10px 12px;
+        box-shadow: 0 5px 18px rgb(11 31 58 / 18%)
+    }
+
+    .brandBlock {
+        gap: 9px;
+        padding: 0 4px 9px
+    }
+
+    .brandBlock>span {
+        width: 34px;
+        height: 34px
+    }
+
+    .brandBlock strong {
+        font-size: .95rem
+    }
+
+    .brandBlock small {
+        font-size: .6rem
+    }
+
+    .sidebar nav {
+        gap: 5px;
+        padding-bottom: 2px;
+        scrollbar-width: none
+    }
+
+    .sidebar nav::-webkit-scrollbar {
+        display: none
+    }
+
+    .sidebar nav a {
+        gap: 7px;
+        padding: 9px 11px;
+        font-size: .7rem
+    }
+
+    .sidebar nav a b {
+        width: auto;
+        font-size: .9rem
+    }
+
+    .topbarNew {
+        gap: 10px
+    }
+
+    .topbarNew>strong {
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        font-size: .78rem
+    }
+
+    .topbarNew>span {
+        flex: 0 0 auto
+    }
+
+    .pageCanvas {
+        padding: 18px 12px 28px
+    }
+
+    .pageTitle,
+    .workflowPageTitle {
+        align-items: stretch;
+        flex-direction: column;
+        gap: 15px;
+        margin-bottom: 20px
+    }
+
+    .pageTitle h1 {
+        font-size: clamp(1.7rem, 9vw, 2.25rem);
+        overflow-wrap: anywhere
+    }
+
+    .pageTitle p {
+        font-size: .82rem
+    }
+
+    .pageTitle>button,
+    .pageTitle>a {
+        width: 100%
+    }
+
+    .reportActions,
+    .summaryActions {
+        width: 100%;
+        display: grid;
+        grid-template-columns: 1fr
+    }
+
+    .reportActions button,
+    .summaryActions button,
+    .summaryActions a {
+        width: 100%;
+        text-align: center
+    }
+
+    .commandColumns,
+    .commandBoard,
+    .workflowExecutionGrid,
+    .reportGrid,
+    .reportChartGrid,
+    .marketingGrid,
+    .executiveGrid {
+        grid-template-columns: minmax(0, 1fr)
+    }
+
+    .dashboardKpis,
+    .commandKpis,
+    .kpiGrid,
+    .reportKpis,
+    .healthGrid,
+    .workerBento,
+    .executiveKpis {
+        grid-template-columns: minmax(0, 1fr)
+    }
+
+    .objectiveFormNew,
+    .overviewCard,
+    .principlesCard,
+    .createdWorkflow,
+    .contentSection,
+    .chartCard,
+    .insightsCard,
+    .budgetEditor,
+    .planDetails,
+    .utilizationCard,
+    .summaryPanel,
+    .workerCard {
+        min-width: 0;
+        padding: 17px
+    }
+
+    .objectiveFormNew>header,
+    .createdWorkflow header,
+    .contentSection>header,
+    .chartCard>header,
+    .budgetEditor>header,
+    .summaryPanel>header,
+    .eventLog>header {
+        align-items: flex-start;
+        flex-direction: column
+    }
+
+    .overviewCard ol {
+        grid-template-columns: 1fr 1fr
+    }
+
+    .workflowFacts {
+        grid-template-columns: 1fr
+    }
+
+    .workflowFacts div:last-child {
+        border-bottom: 0
+    }
+
+    .pipeline {
+        grid-template-columns: repeat(9, 105px);
+        max-width: 100%;
+        overflow-x: auto
+    }
+
+    .pipelineStage {
+        min-height: 78px;
+        padding: 11px
+    }
+
+    .contextLinks {
+        justify-content: flex-start;
+        overflow-x: auto
+    }
+
+    .contextLinks a {
+        flex: 0 0 auto
+    }
+
+    .completionBadge {
+        align-self: flex-start;
+        text-align: left
+    }
+
+    .completionBadge strong {
+        font-size: 2rem
+    }
+
+    .taskCardNew>p {
+        min-height: 0
+    }
+
+    .taskCardNew dd {
+        overflow-wrap: anywhere
+    }
+
+    .workerToolbar {
+        padding: 6px
+    }
+
+    .workerToolbar>div {
+        width: 100%;
+        padding-bottom: 2px;
+        scrollbar-width: none
+    }
+
+    .workerToolbar button {
+        flex: 0 0 auto;
+        padding: 9px 12px
+    }
+
+    .workerToolbar input {
+        width: 100%
+    }
+
+    .workerCard dl div {
+        align-items: flex-start;
+        flex-direction: column
+    }
+
+    .workerCard dd {
+        max-width: 100%;
+        text-align: left;
+        overflow-wrap: anywhere
+    }
+
+    .allocationList article {
+        grid-template-columns: 32px minmax(0, 1fr)
+    }
+
+    .allocationList input {
+        grid-column: 1/-1
+    }
+
+    .budgetEditor header>strong {
+        font-size: 1.15rem
+    }
+
+    .systemBanner {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 18px;
+        padding: 20px
+    }
+
+    .systemBanner>div:last-child {
+        text-align: left
+    }
+
+    .eventLog>header {
+        gap: 6px;
+        padding: 17px
+    }
+
+    .eventTableWrap {
+        max-width: 100%;
+        -webkit-overflow-scrolling: touch
+    }
+
+    .eventLog table {
+        min-width: 760px
+    }
+
+    .reportInsights {
+        grid-template-columns: 1fr
+    }
+
+    .reportInsights section+section {
+        margin: 0;
+        padding: 17px 0 0;
+        border-top: 1px solid var(--border);
+        border-left: 0
+    }
+
+    .categoryBreakdown article>div {
+        align-items: flex-start;
+        gap: 8px
+    }
+
+    .categoryBreakdown article span {
+        overflow-wrap: anywhere
+    }
+
+    .chartCard>header small {
+        overflow-wrap: anywhere
+    }
+
+    .chartWrap,
+    .forecastChart,
+    .dataChart {
+        height: 240px
+    }
+
+    .dataChart.small {
+        height: 210px
+    }
+
+    .donutChart {
+        height: 195px
+    }
+
+    .executiveGrid .summaryPanel {
+        min-width: 0
+    }
+
+    .summaryPanel dl {
+        grid-template-columns: 1fr
+    }
+
+    .recommendationsPanel {
+        grid-column: auto
+    }
+
+    .summaryPanel dd {
+        overflow-wrap: anywhere
+    }
+
+    .datasetBanner {
+        align-items: flex-start;
+        flex-direction: column
+    }
+
+    .datasetBanner strong,
+    .datasetBanner span {
+        overflow-wrap: anywhere
+    }
+
+    .fileFacts {
+        grid-template-columns: 1fr
+    }
+
+    .modalBackdrop {
+        align-items: end;
+        padding: 0
+    }
+
+    .financeModal {
+        width: 100%;
+        max-height: 92vh;
+        border-radius: 16px 16px 0 0
+    }
+
+    .financeModal>header {
+        padding: 17px
+    }
+
+    .financeModal>nav {
+        overflow-x: auto;
+        padding: 12px
+    }
+
+    .financeModal nav button {
+        min-width: 110px;
+        padding: 9px 7px
+    }
+
+    .sampleDataset,
+    .fileDrop,
+    .manualFinance,
+    .integrationNotice {
+        margin: 0 12px;
+        padding: 15px
+    }
+
+    .filePanel {
+        margin: 0 12px
+    }
+
+    .financeModal>footer {
+        padding: 12px
+    }
+
+    .financeModal>footer button {
+        flex: 1
+    }
+
+    .stateCard {
+        margin: 25px auto;
+        padding: 25px 17px
+    }
+}
+
+@media(max-width:390px) {
+    .pageCanvas {
+        padding-inline: 10px
+    }
+
+    .overviewCard ol {
+        grid-template-columns: 1fr
+    }
+
+    .commandKpis article,
+    .dashboardKpis article {
+        min-height: 0
+    }
+
+    .chartWrap,
+    .forecastChart,
+    .dataChart {
+        height: 215px
+    }
+
+    .financeModal nav button {
+        min-width: 100px;
+        font-size: .68rem
+    }
+}
+
+.menuButton,
+.navScrim {
+    display: none
+}
+
+@media(max-width:1024px) {
+    .appShell { display: block }
+    .menuButton { position: fixed; z-index: 42; top: 14px; left: 14px; width: 42px; height: 42px; display: grid; align-content: center; gap: 5px; padding: 10px; border: 1px solid var(--border); border-radius: 10px; background: #fff; box-shadow: 0 6px 18px rgb(11 31 58 / 15%) }
+    .menuButton i { display: block; width: 100%; height: 2px; border-radius: 2px; background: var(--navy); transition: transform .2s, opacity .2s }
+    .navOpen .menuButton i:first-child { transform: translateY(7px) rotate(45deg) }
+    .navOpen .menuButton i:nth-child(2) { opacity: 0 }
+    .navOpen .menuButton i:last-child { transform: translateY(-7px) rotate(-45deg) }
+    .navScrim { position: fixed; z-index: 39; inset: 0; display: block; border: 0; background: rgb(8 20 38 / 48%) }
+    .sidebar { position: fixed; z-index: 40; inset: 0 auto 0 0; width: min(290px,82vw); height: 100dvh; display: flex; padding: 72px 16px 20px; transform: translateX(-105%); transition: transform .22s ease; box-shadow: 12px 0 30px rgb(8 20 38 / 20%) }
+    .navOpen .sidebar { transform: translateX(0) }
+    .sidebar .brandBlock { padding: 0 10px 22px }
+    .sidebar nav { display: grid; overflow: visible }
+    .sidebar nav a { padding: 13px 15px; font-size: .8rem }
+    .version { display: block }
+    .topbarNew { position: sticky; z-index: 38; top: 0; padding-left: 70px }
+}
+
+@media(max-width:720px) {
+    .sidebar { padding-top: 70px }
+    .brandBlock { gap: 12px }
+    .brandBlock>span { width: 42px; height: 42px }
+    .brandBlock strong { font-size: 1.05rem }
+    .brandBlock small { font-size: .68rem }
+    .sidebar nav { padding: 0 }
+    .sidebar nav a { gap: 13px }
+    .sidebar nav a b { width: 22px; font-size: 1.05rem }
+    .topbarNew { padding-left: 68px }
+    .menuButton { top: 8px; left: 10px }
+}
