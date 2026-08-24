@@ -4,29 +4,38 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, type ReactNode } from "react";
 
-function workflowId(pathname: string) {
-  const match = pathname.match(/^\/(?:workflows|reports|marketing)\/([^/]+)/);
+function pathWorkflowId(pathname: string) {
+  const match = pathname.match(
+    /^\/(?:workflows|reports|marketing|executive-summary)\/([^/]+)/,
+  );
   return match?.[1] ? decodeURIComponent(match[1]) : null;
 }
 
 export function AppShell({
   children,
   mode,
+  workflowId,
 }: {
   children: ReactNode;
   mode?: "demo" | "real";
+  workflowId?: string;
 }) {
   const pathname = usePathname();
-  const pathId = workflowId(pathname);
+  const pathId = workflowId ?? pathWorkflowId(pathname);
+  const encodedId = pathId ? encodeURIComponent(pathId) : null;
   const [menuOpen, setMenuOpen] = useState(false);
   const links = [
     ["Command Center", "/", "▦"],
     ["AI Workforce", "/workers?demo=1", "♙"],
-    ["Workflow", "/workflows/demo", "⌘"],
-    ["Reports", "/reports/demo", "▥"],
-    ["Marketing", "/marketing/demo", "⌁"],
-    ["Watcher", "/watcher?demo=1", "⌁"],
-    ["Executive Summary", "/executive-summary/demo", "⌁"],
+    ["Workflow", `/workflows/${encodedId ?? "demo"}`, "⌘"],
+    ["Reports", `/reports/${encodedId ?? "demo"}`, "▥"],
+    ["Marketing", `/marketing/${encodedId ?? "demo"}`, "⌁"],
+    [
+      "Watcher",
+      encodedId ? `/watcher?workflow=${encodedId}` : "/watcher?demo=1",
+      "⌁",
+    ],
+    ["Executive Summary", `/executive-summary/${encodedId ?? "demo"}`, "⌁"],
   ];
   const activeFor = (label: string) =>
     label === "Command Center"

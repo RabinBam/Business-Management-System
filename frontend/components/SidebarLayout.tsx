@@ -25,17 +25,25 @@ function Icon({ name, size = 20 }: { name: IconName; size?: number }) {
   return <svg aria-hidden="true" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">{paths[name]}</svg>;
 }
 
-const navItems: { label: string; href: string; id: string; icon: IconName }[] = [
-  { label: "Command Center", href: "/", id: "command", icon: "grid" },
-  { label: "Workflow", href: "/workflows/demo", id: "workflow", icon: "workflow" },
-  { label: "Workers", href: "/workers?demo=1", id: "workers", icon: "workers" },
-  { label: "Reports", href: "/reports/demo", id: "reports", icon: "reports" },
-  { label: "Marketing", href: "/marketing/demo", id: "marketing", icon: "marketing" },
-  { label: "Watcher", href: "/watcher?demo=1", id: "watcher", icon: "watcher" },
-  { label: "Executive Summary", href: "/executive-summary/demo", id: "executive", icon: "summary" },
-];
+function navItems(workflowId?: string) {
+  const id = workflowId ? encodeURIComponent(workflowId) : "demo";
+  return [
+    { label: "Command Center", href: "/", id: "command", icon: "grid" as const },
+    { label: "Workflow", href: `/workflows/${id}`, id: "workflow", icon: "workflow" as const },
+    { label: "Workers", href: "/workers?demo=1", id: "workers", icon: "workers" as const },
+    { label: "Reports", href: `/reports/${id}`, id: "reports", icon: "reports" as const },
+    { label: "Marketing", href: `/marketing/${id}`, id: "marketing", icon: "marketing" as const },
+    {
+      label: "Watcher",
+      href: workflowId ? `/watcher?workflow=${id}` : "/watcher?demo=1",
+      id: "watcher",
+      icon: "watcher" as const,
+    },
+    { label: "Executive Summary", href: `/executive-summary/${id}`, id: "executive", icon: "summary" as const },
+  ];
+}
 
-export function SidebarLayout({ children, active, customHeaderPills }: { children: ReactNode, active: string, customHeaderPills?: ReactNode }) {
+export function SidebarLayout({ children, active, customHeaderPills, workflowId }: { children: ReactNode, active: string, customHeaderPills?: ReactNode, workflowId?: string }) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   return (
@@ -46,7 +54,7 @@ export function SidebarLayout({ children, active, customHeaderPills }: { childre
           <div><strong>Byapari</strong><span>Decision Intelligence</span><small>v1.0</small></div>
         </div>
         <nav aria-label="Primary navigation">
-          {navItems.map((item) => (
+          {navItems(workflowId).map((item) => (
             <Link key={item.label} href={item.href} className={active === item.id ? "active" : ""} onClick={() => setIsMobileMenuOpen(false)}>
               <Icon name={item.icon}/>
               <span>{item.label}</span>

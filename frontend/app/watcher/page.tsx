@@ -3,11 +3,12 @@ import { WatcherPanel } from "@/components/WatcherPanel";
 export default async function WatcherPage({
   searchParams,
 }: {
-  searchParams: Promise<{ demo?: string }>;
+  searchParams: Promise<{ demo?: string; workflow?: string }>;
 }) {
-  const demo = (await searchParams).demo === "1";
+  const query = await searchParams;
+  const demo = query.demo === "1";
   return (
-    <AppShell mode={demo ? "demo" : "real"}>
+    <AppShell mode={demo ? "demo" : "real"} workflowId={query.workflow}>
       <header className="pageTitle">
         <div>
           <span>Reliability layer</span>

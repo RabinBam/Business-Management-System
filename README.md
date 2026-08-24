@@ -13,7 +13,9 @@ A shared two-day MVP foundation for a five-person team building an AI-assisted b
 
 3. Open the command center at <http://localhost:3000> and API documentation at <http://localhost:8000/docs>.
 
-The starter uses an in-memory workflow store and a mock AI provider so every developer can work without credentials. Restarting the backend clears created workflows. The database, real AI provider, worker execution, prediction, reports, and marketing generation are intentionally isolated extension points.
+The default stack uses in-memory stores and a deterministic mock AI provider, so every developer can run the complete workflow without credentials. The integrated path covers objective segmentation, task refinement, worker execution, management review, reports, marketing, watcher events, and the final executive summary. Restarting the backend clears runtime data; durable storage and the real AI provider remain opt-in extension points.
+
+The checked-in configuration does **not** use an OpenAI key. OpenAI calls are enabled only when `AI_PROVIDER=openai`, `AI_PRIMARY_MODEL`, and `OPENAI_API_KEY` are set deliberately. See [the DEV implementation status](docs/DEV_STATUS.md) for the tested handoffs and current MVP limits.
 
 ## Local development
 
@@ -43,8 +45,13 @@ Read [docs/OWNERSHIP.md](docs/OWNERSHIP.md) before coding and [docs/API_CONTRACT
 ## Quality checks
 
 ```bash
-cd backend && pytest
-cd frontend && npm run check
-docker compose config
+cd backend
+ruff check .
+pytest
+cd ../frontend
+npm run check
+cd ..
+docker compose config --quiet
+docker compose build
 ```
 

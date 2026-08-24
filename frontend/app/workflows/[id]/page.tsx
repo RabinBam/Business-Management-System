@@ -19,7 +19,7 @@ export default async function WorkflowPage({ params }: { params: Promise<{ id: s
   const [workflow, tasks] = result;
 
   return (
-    <SidebarLayout active="workflow">
+    <SidebarLayout active="workflow" workflowId={workflow.id}>
       <header className="workflowHeader">
         <div>
           <div className="eyebrow">Workflow {workflow.id}</div>
