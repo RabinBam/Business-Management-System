@@ -35,11 +35,13 @@ def test_create_read_and_run_workflow() -> None:
 
     started = client.post(f"/api/v1/workflows/{workflow_id}/run")
     assert started.status_code == 200
-    assert started.json()["data"]["status"] == "EXECUTING"
+    assert started.json()["data"]["status"] == "COMPLETED"
+    assert started.json()["data"]["executive_summary"] is not None
 
     tasks = client.get(f"/api/v1/workflows/{workflow_id}/tasks")
     assert tasks.status_code == 200
     assert len(tasks.json()["data"]) == 2
+    assert {task["status"] for task in tasks.json()["data"]} == {"COMPLETED"}
 
 
 def test_marketing_budget_is_validated() -> None:

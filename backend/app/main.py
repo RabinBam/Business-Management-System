@@ -6,9 +6,11 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.api.router import api_router
 from app.config import settings
+from app.integrations import configure_workflow_integrations
 
 
 def create_app() -> FastAPI:
+    configure_workflow_integrations()
     application = FastAPI(
         title="AegisFlow AI API",
         version="0.1.0",
