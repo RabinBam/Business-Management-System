@@ -1662,7 +1662,7 @@
     .sidebar nav { display: grid; overflow: visible }
     .sidebar nav a { padding: 13px 15px; font-size: .8rem }
     .version { display: block }
-    .topbarNew { padding-left: 70px }
+    .topbarNew { position: sticky; z-index: 38; top: 0; padding-left: 70px }
 }
 
 @media(max-width:720px) {
