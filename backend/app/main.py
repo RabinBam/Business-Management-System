@@ -3,19 +3,28 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
+from starlette.middleware.gzip import GZipMiddleware
+from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from app.api.router import api_router
 from app.config import settings
 from app.integrations import configure_workflow_integrations
+from app.security import RequestGuardMiddleware
 
 
 def create_app() -> FastAPI:
     configure_workflow_integrations()
     application = FastAPI(
         title="AegisFlow AI API",
-        version="0.1.0",
-        description="Shared API foundation for the AegisFlow team.",
+        version="1.0.0",
+        description="Durable orchestration API for accountable business workflows.",
     )
+    application.add_middleware(GZipMiddleware, minimum_size=1_000)
+    application.add_middleware(
+        TrustedHostMiddleware,
+        allowed_hosts=list(settings.trusted_hosts),
+    )
+    application.add_middleware(RequestGuardMiddleware)
     application.add_middleware(
         CORSMiddleware,
         allow_origins=[settings.frontend_origin],
