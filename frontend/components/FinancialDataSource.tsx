@@ -99,6 +99,9 @@ export function FinancialDataSource({
     try {
       const row: FinancialDataRow = {
         period: form.period.trim(),
+        recordType: /^\d{4}-\d{1,2}$/.test(form.period.trim()) ? "MONTHLY" : "YEARLY",
+        year: Number(form.period.trim().slice(0, 4)) || undefined,
+        month: /^\d{4}-\d{1,2}$/.test(form.period.trim()) ? Number(form.period.trim().split("-")[1]) : undefined,
         totalBudget: numeric("totalBudget"),
         revenue: numeric("revenue"),
         expense: numeric("expense"),
@@ -108,6 +111,7 @@ export function FinancialDataSource({
         rndSpend: numeric("rndSpend", false),
         otherSpend: numeric("otherSpend", false),
       };
+      row.grossProfit = row.revenue - row.expense;
       if (!row.period) throw new Error("Enter a reporting period.");
       onApply([row], "manual");
       setOpen(false);
@@ -183,11 +187,10 @@ export function FinancialDataSource({
                 </nav>
                 {mode === "sample" && (
                   <div className="sampleDataset">
-                    <strong>Three-period 2026 finance sample</strong>
+                    <strong>2016–2026 financial performance sample</strong>
                     <p>
-                      Includes budget, revenue, expense, sales units, and
-                      category expenditure. Every report visualization will
-                      update.
+                      Includes yearly history plus monthly 2026 budget,
+                      revenue, expense, profit, sales, and category data.
                     </p>
                     <button
                       className="primaryButton"

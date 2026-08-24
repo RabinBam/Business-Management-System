@@ -2,9 +2,38 @@ import type { MarketingPlan, Report, Task, WatcherStatus, Workflow } from "./typ
 import type { FinancialDataRow } from "./financialParser";
 
 export const demoFinancialRows: FinancialDataRow[] = [
-  {period:"2026-01",totalBudget:3500000,revenue:3540000,expense:2715000,salesUnits:2140,marketingSpend:610000,operationsSpend:1030000,rndSpend:660000,otherSpend:415000},
-  {period:"2026-02",totalBudget:3500000,revenue:3670000,expense:2760000,salesUnits:2210,marketingSpend:625000,operationsSpend:1045000,rndSpend:670000,otherSpend:420000},
-  {period:"2026-03",totalBudget:3600000,revenue:3820000,expense:2830000,salesUnits:2300,marketingSpend:655000,operationsSpend:1065000,rndSpend:680000,otherSpend:430000},
+  ...[
+    [2016, 5000000, 5400000, 4250000, 31100],
+    [2017, 5700000, 6200000, 4780000, 35400],
+    [2018, 6400000, 7100000, 5360000, 40100],
+    [2019, 7200000, 8400000, 6120000, 46600],
+    [2020, 8000000, 9200000, 6980000, 50100],
+    [2021, 9300000, 11500000, 8150000, 58900],
+    [2022, 11000000, 14000000, 9720000, 68400],
+    [2023, 14000000, 18200000, 12400000, 84200],
+    [2024, 17500000, 23500000, 15750000, 103600],
+    [2025, 22000000, 30800000, 20400000, 128400],
+    [2026, 29000000, 40200000, 28244000, 157800],
+  ].map(([year, totalBudget, revenue, expense, salesUnits], index, values) => ({
+    period: String(year), recordType: "YEARLY" as const, year,
+    totalBudget, revenue, expense, grossProfit: revenue - expense, salesUnits,
+    revenueGrowthPercent: index ? ((revenue - values[index - 1][2]) / values[index - 1][2]) * 100 : undefined,
+    marketingSpend: expense * .24, operationsSpend: expense * .42,
+    rndSpend: expense * .21, otherSpend: expense * .13,
+  })),
+  ...[
+    [1, 2600000, 2240000, 11800], [2, 2750000, 2280000, 12100],
+    [3, 2900000, 2320000, 12400], [4, 3050000, 2360000, 12700],
+    [5, 3150000, 2390000, 12900], [6, 3250000, 2420000, 13100],
+    [7, 3350000, 2450000, 13300], [8, 3450000, 2480000, 13500],
+    [9, 3550000, 2510000, 13700], [10, 3650000, 2540000, 13900],
+    [11, 3750000, 2580000, 14100], [12, 4500000, 2724000, 14300],
+  ].map(([month, revenue, expense, salesUnits]) => ({
+    period: `2026-${String(month).padStart(2, "0")}`, recordType: "MONTHLY" as const,
+    year: 2026, month, totalBudget: 29000000 / 12, revenue, expense,
+    grossProfit: revenue - expense, salesUnits, marketingSpend: expense * .24,
+    operationsSpend: expense * .42, rndSpend: expense * .21, otherSpend: expense * .13,
+  })),
 ];
 
 export const demoWorkflow: Workflow = {
