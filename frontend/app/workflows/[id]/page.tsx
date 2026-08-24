@@ -1,2 +1,9 @@
 import { WorkflowView } from "@/components/WorkflowView";
-export default async function WorkflowPage({ params }: { params: Promise<{ id: string }> }) { const { id } = await params; return <WorkflowView id={id}/>; }
+export default async function WorkflowPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = await params;
+  return <WorkflowView id={id} />;
+}

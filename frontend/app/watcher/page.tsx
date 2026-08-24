@@ -1,12 +1,25 @@
+import { AppShell } from "@/components/AppShell";
 import { WatcherPanel } from "@/components/WatcherPanel";
-import { SidebarLayout } from "@/components/SidebarLayout";
-
-export const dynamic = "force-dynamic";
-
-export default function WatcherPage() {
+export default async function WatcherPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ demo?: string }>;
+}) {
+  const demo = (await searchParams).demo === "1";
   return (
-    <SidebarLayout active="watcher">
-      <WatcherPanel />
-    </SidebarLayout>
+    <AppShell mode={demo ? "demo" : "real"}>
+      <header className="pageTitle">
+        <div>
+          <span>Reliability layer</span>
+          <h1>System Watcher</h1>
+          <p>
+            {demo
+              ? "Prototype monitoring view with representative workflow events."
+              : "Live failures, retries, validation events, and recoveries reported by FastAPI."}
+          </p>
+        </div>
+      </header>
+      <WatcherPanel demo={demo} />
+    </AppShell>
   );
 }

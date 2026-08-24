@@ -1,4 +1,11 @@
 import type { MarketingPlan, Report, Task, WatcherStatus, Workflow } from "./types";
+import type { FinancialDataRow } from "./financialParser";
+
+export const demoFinancialRows: FinancialDataRow[] = [
+  {period:"2026-01",totalBudget:3500000,revenue:3540000,expense:2715000,salesUnits:2140,marketingSpend:610000,operationsSpend:1030000,rndSpend:660000,otherSpend:415000},
+  {period:"2026-02",totalBudget:3500000,revenue:3670000,expense:2760000,salesUnits:2210,marketingSpend:625000,operationsSpend:1045000,rndSpend:670000,otherSpend:420000},
+  {period:"2026-03",totalBudget:3600000,revenue:3820000,expense:2830000,salesUnits:2300,marketingSpend:655000,operationsSpend:1065000,rndSpend:680000,otherSpend:430000},
+];
 
 export const demoWorkflow: Workflow = {
   id: "demo", title: "Q3 Product Launch Workflow",
