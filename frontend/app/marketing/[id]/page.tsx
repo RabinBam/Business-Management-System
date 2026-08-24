@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { ReactNode } from "react";
 import { BudgetEditor } from "@/components/BudgetEditor";
 
 export default async function MarketingPage({ params }: { params: Promise<{ id: string }> }) {
