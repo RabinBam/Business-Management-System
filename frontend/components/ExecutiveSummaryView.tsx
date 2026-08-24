@@ -13,6 +13,7 @@ import {
 import { getWorkflow } from "@/lib/api";
 import { formatNpr } from "@/lib/formatters";
 import type { Workflow } from "@/lib/types";
+import { FinancialReportDownloadButton } from "./reports/FinancialReportExport";
 
 function LiveExecutiveSummary({ id }: { id: string }) {
   const [workflow, setWorkflow] = useState<Workflow | null>(null);
@@ -122,13 +123,13 @@ export function ExecutiveSummaryView({ id }: { id: string }) {
       <header className="pageTitle">
         <div>
           <span>Quarterly review</span>
-          <h1>Q3 Executive Review</h1>
+          <h1>Executive Summary</h1>
           <p>
             Comprehensive summary of business execution and strategic alignment.
           </p>
         </div>
         <div className="summaryActions">
-          <button>⇩ Download PDF</button>
+          <FinancialReportDownloadButton />
           <Link href="/">▷ Start New Workflow</Link>
         </div>
       </header>

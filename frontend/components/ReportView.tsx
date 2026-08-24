@@ -8,15 +8,12 @@ import type { Report } from "@/lib/types";
 import {
   demoFinancialRows,
   demoReport,
-  demoSalesForecast,
 } from "@/lib/demoData";
-import type { FinancialDataRow } from "@/lib/financialParser";
+import { deriveFinancialMetrics, type FinancialDataRow } from "@/lib/financialParser";
 import { BudgetDonut } from "./charts/BudgetDonut";
 import { ForecastChart } from "./charts/ForecastChart";
 import { ProgressBar } from "./charts/ProgressBar";
-import { RevenueHistoryChart } from "./charts/RevenueHistoryChart";
-import { BudgetExpenseChart } from "./charts/BudgetExpenseChart";
-import { SalesUnitsChart } from "./charts/SalesUnitsChart";
+import { ReportAnalytics } from "./reports/ReportAnalytics";
 import {
   FinancialDataSource,
   type FinancialDatasetSource,
@@ -52,34 +49,7 @@ export function ReportView({ id }: { id: string }) {
     const timer = window.setTimeout(() => void load(), 0);
     return () => window.clearTimeout(timer);
   }, [isDemo, load]);
-  const metrics = useMemo(() => {
-    if (!financialRows.length) return null;
-    const rows = [...financialRows].sort((a, b) =>
-        a.period.localeCompare(b.period, undefined, { numeric: true }),
-      ),
-      latest = rows.at(-1)!,
-      previous = rows.at(-2),
-      growth =
-        previous && previous.revenue !== 0
-          ? ((latest.revenue - previous.revenue) / previous.revenue) * 100
-          : null,
-      categories = [
-        { name: "Marketing", amount: latest.marketingSpend },
-        { name: "Operations", amount: latest.operationsSpend },
-        { name: "R&D", amount: latest.rndSpend },
-        { name: "Other", amount: latest.otherSpend },
-      ],
-      categoryTotal = categories.reduce((sum, item) => sum + item.amount, 0);
-    return {
-      rows,
-      latest,
-      growth,
-      categories: categories.map((item) => ({
-        ...item,
-        percent: categoryTotal ? (item.amount / categoryTotal) * 100 : 0,
-      })),
-    };
-  }, [financialRows]);
+  const metrics = useMemo(() => deriveFinancialMetrics(financialRows), [financialRows]);
   if (loading)
     return (
       <AppShell>
@@ -137,7 +107,7 @@ export function ReportView({ id }: { id: string }) {
           <h1>Financial Intelligence</h1>
           <p>
             {local
-              ? `${metrics.rows.length} period${metrics.rows.length === 1 ? "" : "s"} · ${metrics.rows[0].period} to ${metrics.latest.period}`
+              ? `${metrics.rows.length} row${metrics.rows.length === 1 ? "" : "s"} · ${metrics.split.yearly.length} yearly · ${metrics.split.monthly.length} monthly`
               : "API-generated workflow report"}
           </p>
         </div>
@@ -152,7 +122,7 @@ export function ReportView({ id }: { id: string }) {
             <strong>{datasetName}</strong>
             <span>Loaded locally for prototype analysis</span>
           </div>
-          <small>Current reporting period: {metrics.latest.period}</small>
+          <small>Records: {metrics.rows.length} · Coverage: {metrics.coverage} · Yearly: {metrics.split.yearly.length} · Monthly: {metrics.split.monthly.length} · Monthly years: {metrics.monthlyYears.join(", ") || "None"}</small>
         </div>
       )}
       <section className="kpiGrid reportKpis">
@@ -220,19 +190,17 @@ export function ReportView({ id }: { id: string }) {
         <section className="chartCard">
           <header>
             <div>
-              <span>
-                {local ? "Historical Revenue" : "Sales Revenue Forecast"}
-              </span>
+              <span>Sales Revenue Forecast</span>
               <h2>{formatNpr(revenue)}</h2>
             </div>
             <small>
-              {local
-                ? "Values read from active dataset"
+              {local && source !== "demo"
+                ? "Backend prediction integration required"
                 : `Method: ${report.sales_prediction.method.replaceAll("_", " ")}`}
             </small>
           </header>
-          {local ? (
-            <RevenueHistoryChart rows={metrics.rows} />
+          {local && source !== "demo" ? (
+            <div className="forecastNotice">AI forecast will be available after backend prediction integration.</div>
           ) : (
             <ForecastChart
               data={[
@@ -249,45 +217,7 @@ export function ReportView({ id }: { id: string }) {
           )}
         </section>
       </div>
-      {local && (
-        <section className="reportChartGrid">
-          <article className="chartCard">
-            <header>
-              <div>
-                <span>Budget vs Expense</span>
-                <h2>Period comparison</h2>
-              </div>
-            </header>
-            <BudgetExpenseChart rows={metrics.rows} />
-          </article>
-          <article className="chartCard">
-            <header>
-              <div>
-                <span>Sales Units Trend</span>
-                <h2>{metrics.latest.salesUnits.toLocaleString()} units</h2>
-              </div>
-            </header>
-            <SalesUnitsChart rows={metrics.rows} />
-          </article>
-        </section>
-      )}
-      {isDemo && source === "demo" && (
-        <section className="chartCard demoForecast">
-          <header>
-            <div>
-              <span>Demo Sales Forecast</span>
-              <h2>{formatNpr(report.sales_prediction.predicted_sales)}</h2>
-            </div>
-            <small>Demonstration data only</small>
-          </header>
-          <ForecastChart data={demoSalesForecast} />
-        </section>
-      )}
-      {isDemo && source !== "demo" && (
-        <div className="forecastNotice">
-          AI forecast will be available after backend prediction integration.
-        </div>
-      )}
+      {local && <ReportAnalytics rows={metrics.rows} />}
       <aside className="insightsCard reportInsights">
         <section>
           <h2>Risks</h2>
