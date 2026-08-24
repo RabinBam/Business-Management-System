@@ -9,7 +9,7 @@ import {
   demoFinancialRows,
   demoReport,
 } from "@/lib/demoData";
-import { splitFinancialRows, type FinancialDataRow } from "@/lib/financialParser";
+import { deriveFinancialMetrics, type FinancialDataRow } from "@/lib/financialParser";
 import { BudgetDonut } from "./charts/BudgetDonut";
 import { ForecastChart } from "./charts/ForecastChart";
 import { ProgressBar } from "./charts/ProgressBar";
@@ -49,41 +49,7 @@ export function ReportView({ id }: { id: string }) {
     const timer = window.setTimeout(() => void load(), 0);
     return () => window.clearTimeout(timer);
   }, [isDemo, load]);
-  const metrics = useMemo(() => {
-    if (!financialRows.length) return null;
-    const rows = [...financialRows].sort((a, b) =>
-        a.period.localeCompare(b.period, undefined, { numeric: true }),
-      ),
-      split = splitFinancialRows(rows),
-      activeSeries = split.yearly.length ? split.yearly : split.monthly.length ? split.monthly : rows,
-      latest = activeSeries.at(-1)!,
-      previous = activeSeries.at(-2),
-      growth =
-        latest.revenueGrowthPercent ?? (previous && previous.revenue !== 0
-          ? ((latest.revenue - previous.revenue) / previous.revenue) * 100
-          : null),
-      categories = [
-        { name: "Marketing", amount: latest.marketingSpend },
-        { name: "Operations", amount: latest.operationsSpend },
-        { name: "R&D", amount: latest.rndSpend },
-        { name: "Other", amount: latest.otherSpend },
-      ],
-      categoryTotal = categories.reduce((sum, item) => sum + item.amount, 0);
-    const years = rows.map(row=>row.year).filter((year): year is number => Boolean(year));
-    const monthlyYears = [...new Set(split.monthly.map(row=>row.year).filter((year): year is number => Boolean(year)))];
-    return {
-      rows,
-      split,
-      coverage: years.length ? `${Math.min(...years)}–${Math.max(...years)}` : `${rows[0].period}–${rows.at(-1)!.period}`,
-      monthlyYears,
-      latest,
-      growth,
-      categories: categories.map((item) => ({
-        ...item,
-        percent: categoryTotal ? (item.amount / categoryTotal) * 100 : 0,
-      })),
-    };
-  }, [financialRows]);
+  const metrics = useMemo(() => deriveFinancialMetrics(financialRows), [financialRows]);
   if (loading)
     return (
       <AppShell>

@@ -24,7 +24,7 @@ export default function HomePage() {
           <h1>Command Center</h1>
           <p>Real-time intelligence and execution monitoring.</p>
         </div>
-        <Link className="primaryButton" href="/reports/demo">
+        <Link className="primaryButton" href="/executive-summary/demo">
           ✦ Generate Insight Report
         </Link>
       </header>

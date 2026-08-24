@@ -100,6 +100,28 @@ export function splitFinancialRows(rows: FinancialDataRow[]): { yearly: Financia
   return { yearly: yearlyRows, monthly: monthlyRows };
 }
 
+export function deriveFinancialMetrics(financialRows: FinancialDataRow[]) {
+  if (!financialRows.length) return null;
+  const rows = [...financialRows].sort((a,b)=>a.period.localeCompare(b.period,undefined,{numeric:true}));
+  const split = splitFinancialRows(rows);
+  const activeSeries = split.yearly.length ? split.yearly : split.monthly.length ? split.monthly : rows;
+  const latest = activeSeries.at(-1)!;
+  const previous = activeSeries.at(-2);
+  const growth = latest.revenueGrowthPercent ?? (previous?.revenue ? (latest.revenue-previous.revenue)/previous.revenue*100 : null);
+  const rawCategories = [
+    {name:"Marketing",amount:latest.marketingSpend}, {name:"Operations",amount:latest.operationsSpend},
+    {name:"R&D",amount:latest.rndSpend}, {name:"Other",amount:latest.otherSpend},
+  ];
+  const categoryTotal = rawCategories.reduce((sum,item)=>sum+item.amount,0);
+  const years = rows.map(row=>row.year).filter((year):year is number=>Boolean(year));
+  return {
+    rows, split, latest, growth,
+    categories: rawCategories.map(item=>({...item,percent:categoryTotal ? item.amount/categoryTotal*100 : 0})),
+    coverage: years.length ? `${Math.min(...years)}–${Math.max(...years)}` : `${rows[0].period}–${rows.at(-1)!.period}`,
+    monthlyYears:[...new Set(split.monthly.map(row=>row.year).filter((year):year is number=>Boolean(year)))],
+  };
+}
+
 export async function parseFinancialFile(file: File): Promise<FinancialDataRow[]> {
   const extension = file.name.split(".").pop()?.toLowerCase();
   if (extension !== "csv" && extension !== "xlsx") throw new Error("Unsupported file type. Choose a CSV or XLSX file.");

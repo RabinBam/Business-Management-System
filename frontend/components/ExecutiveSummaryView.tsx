@@ -8,6 +8,7 @@ import {
   demoWatcherStatus,
 } from "@/lib/demoData";
 import { formatNpr } from "@/lib/formatters";
+import { FinancialReportDownloadButton } from "./reports/FinancialReportExport";
 export function ExecutiveSummaryView({ id }: { id: string }) {
   if (id !== "demo")
     return (
@@ -31,13 +32,13 @@ export function ExecutiveSummaryView({ id }: { id: string }) {
       <header className="pageTitle">
         <div>
           <span>Quarterly review</span>
-          <h1>Q3 Executive Review</h1>
+          <h1>Executive Summary</h1>
           <p>
             Comprehensive summary of business execution and strategic alignment.
           </p>
         </div>
         <div className="summaryActions">
-          <button>⇩ Download PDF</button>
+          <FinancialReportDownloadButton />
           <Link href="/">▷ Start New Workflow</Link>
         </div>
       </header>
