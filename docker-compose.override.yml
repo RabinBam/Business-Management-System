@@ -1,0 +1,33 @@
+# ---------------------------------------------------------------------------
+# DEV-ONLY overlay — applied AUTOMATICALLY by `docker compose up`.
+# Production/CI must bypass it with an explicit file list:
+#     docker compose -f docker-compose.yml up -d --build
+# Owner: Rujal, Person 3 — Infra
+# ---------------------------------------------------------------------------
+services:
+  backend:
+    # Bind-mount ONLY the source tree; the venv stays baked into the image.
+    # uvicorn --reload watches /app/app and restarts on every save.
+    volumes:
+      - ./backend/app:/app/app
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+  frontend:
+    build:
+      # Run against the builder stage for dev: it has node_modules +
+      # devDependencies. The standalone runner stage is prod-only.
+      target: builder
+    environment:
+      # Uncomment if hot-reload misses edits on your machine (common with
+      # Windows-bound mounts): forces polling-based file watching.
+      # WATCHPACK_POLLING: "true"
+      NODE_ENV: development
+    volumes:
+      - ./frontend:/app                          # live source
+      - frontend_node_modules:/app/node_modules  # keep image deps visible (bind would shadow them)
+      - frontend_next_cache:/app/.next           # keep build cache out of the host dir
+    command: npm run dev
+
+volumes:
+  frontend_node_modules:
+  frontend_next_cache:
