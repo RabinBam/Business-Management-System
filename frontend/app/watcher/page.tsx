@@ -1,25 +1,26 @@
-import Link from "next/link";
-
+import { AppShell } from "@/components/AppShell";
 import { WatcherPanel } from "@/components/WatcherPanel";
-
-export const dynamic = "force-dynamic";
-
-export default function WatcherPage() {
+export default async function WatcherPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ demo?: string; workflow?: string }>;
+}) {
+  const query = await searchParams;
+  const demo = query.demo === "1";
   return (
-    <main className="shell">
-      <nav className="topbar">
-        <Link className="brand" href="/">
-          <span className="brandMark">AF</span>
-          <span>AegisFlow</span>
-        </Link>
-      </nav>
-      <header className="pageHeader">
-        <div className="eyebrow">Reliability layer</div>
-        <h1>Watcher activity</h1>
-        <p>Failures, retries, and recoveries appear here without giving an AI control of recovery policy.</p>
+    <AppShell mode={demo ? "demo" : "real"} workflowId={query.workflow}>
+      <header className="pageTitle">
+        <div>
+          <span>Reliability layer</span>
+          <h1>System Watcher</h1>
+          <p>
+            {demo
+              ? "Prototype monitoring view with representative workflow events."
+              : "Live failures, retries, validation events, and recoveries reported by FastAPI."}
+          </p>
+        </div>
       </header>
-      <WatcherPanel />
-    </main>
+      <WatcherPanel/>
+    </AppShell>
   );
 }
-

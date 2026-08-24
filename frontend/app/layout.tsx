@@ -2,17 +2,19 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 
 import "./globals.css";
+import "./prototype.css";
 
 export const metadata: Metadata = {
-  title: "AegisFlow AI",
+  title: "Byapari",
   description: "AI-assisted command center for accountable business workflows.",
 };
 
-export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
+export default function RootLayout({
+  children,
+}: Readonly<{ children: ReactNode }>) {
   return (
     <html lang="en">
       <body>{children}</body>
     </html>
   );
 }
-

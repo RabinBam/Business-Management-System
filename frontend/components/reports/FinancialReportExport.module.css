@@ -1,0 +1,16 @@
+.stage { position:fixed; left:-12000px; top:0; width:1050px; padding:32px; background:#f6f8fc; color:#132238; z-index:-1; }
+.stage section,.stage header { break-inside:avoid; }
+.heading,.kpis,.overview,.insights { background:#fff; border:1px solid #dce3ed; border-radius:14px; margin-bottom:16px; padding:22px; }
+.heading h1 { margin:4px 0 8px; }
+.heading p { color:#667085; margin:0; }
+.kpis { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; }
+.kpis article { background:#f8fafc; border-radius:10px; padding:14px; }
+.kpis span { color:#667085; display:block; font-size:12px; text-transform:uppercase; }
+.kpis strong { display:block; font-size:18px; margin-top:6px; }
+.overview { display:grid; grid-template-columns:310px 1fr; gap:24px; }
+.categories article { margin-top:12px; }
+.categories div { display:flex; justify-content:space-between; margin-bottom:5px; }
+.forecast { height:330px; }
+.insights { display:grid; grid-template-columns:1fr 1fr; gap:28px; }
+.insights h2 { font-size:17px; }
+.insights li { color:#475569; margin-bottom:8px; }

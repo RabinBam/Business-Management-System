@@ -1,0 +1,4 @@
+"use client";
+import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
+import { formatNpr } from "@/lib/formatters";
+export function BudgetDonut({ used, total }: { used: number; total: number }) { const safeUsed = Math.min(Math.max(used,0),Math.max(total,0)); const data=[{name:"Used",value:safeUsed},{name:"Remaining",value:Math.max(total-safeUsed,0)}]; const pct=total>0?Math.round(safeUsed/total*100):0; return <div className="donutChart"><ResponsiveContainer width="100%" height="100%"><PieChart><Pie data={data} dataKey="value" innerRadius="67%" outerRadius="90%" startAngle={90} endAngle={-270} stroke="none">{data.map((_,index)=><Cell fill={index===0?"#6366f1":"#e6e7ee"} key={index}/>)}</Pie><Tooltip formatter={(value)=>formatNpr(Number(value))}/></PieChart></ResponsiveContainer><div><strong>{pct}%</strong><span>Consumed</span></div></div>; }
