@@ -28,11 +28,11 @@ function Icon({ name, size = 20 }: { name: IconName; size?: number }) {
 const navItems: { label: string; href: string; id: string; icon: IconName }[] = [
   { label: "Command Center", href: "/", id: "command", icon: "grid" },
   { label: "Workflow", href: "/workflows/demo", id: "workflow", icon: "workflow" },
-  { label: "Workers", href: "#workforce", id: "workers", icon: "workers" },
+  { label: "Workers", href: "/workers?demo=1", id: "workers", icon: "workers" },
   { label: "Reports", href: "/reports/demo", id: "reports", icon: "reports" },
   { label: "Marketing", href: "/marketing/demo", id: "marketing", icon: "marketing" },
-  { label: "Watcher", href: "/watcher", id: "watcher", icon: "watcher" },
-  { label: "Executive Summary", href: "#summary", id: "executive", icon: "summary" },
+  { label: "Watcher", href: "/watcher?demo=1", id: "watcher", icon: "watcher" },
+  { label: "Executive Summary", href: "/executive-summary/demo", id: "executive", icon: "summary" },
 ];
 
 export function SidebarLayout({ children, active, customHeaderPills }: { children: ReactNode, active: string, customHeaderPills?: ReactNode }) {

@@ -12,7 +12,3 @@ export function TaskCard({ task, assignee, progress }: { task: Task; assignee?: 
     </article>
   );
 }
-<<<<<<< HEAD
-=======
-
->>>>>>> 679be4163add0f55ac625c395f8a32c9b10f9b95
