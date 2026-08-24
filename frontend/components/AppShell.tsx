@@ -26,7 +26,7 @@ export function AppShell({
   const [menuOpen, setMenuOpen] = useState(false);
   const links = [
     ["Command Center", "/", "▦"],
-    ["AI Workforce", "/workers?demo=1", "♙"],
+    ["AI Workforce", "/workers", "♙"],
     ["Workflow", `/workflows/${encodedId ?? "demo"}`, "⌘"],
     ["Reports", `/reports/${encodedId ?? "demo"}`, "▥"],
     ["Marketing", `/marketing/${encodedId ?? "demo"}`, "⌁"],

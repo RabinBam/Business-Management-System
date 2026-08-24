@@ -1,4 +1,5 @@
 import type { Task } from "@/lib/types";
+import { formatNpr } from "@/lib/formatters";
 import { ProgressBar } from "./charts/ProgressBar";
 
 export function TaskCard({ task, assignee, progress }: { task: Task; assignee?: string; progress?: number }) {
@@ -13,6 +14,8 @@ export function TaskCard({ task, assignee, progress }: { task: Task; assignee?: 
         <div><dt>Difficulty</dt><dd>{task.difficulty}/5</dd></div>
         <div><dt>Experience</dt><dd>{task.minimum_experience_years}+ years</dd></div>
         {assignee && <div><dt>Assigned worker</dt><dd>{assignee}</dd></div>}
+        {task.estimated_cost !== undefined && <div><dt>Estimated cost</dt><dd>{formatNpr(task.estimated_cost)}</dd></div>}
+        {(task.revision_count ?? 0) > 0 && <div><dt>Revisions</dt><dd>{task.revision_count}</dd></div>}
         <div><dt>Expected output</dt><dd>{task.expected_output}</dd></div>
         <div><dt>Dependencies</dt><dd>{task.dependency_task_ids.length ? task.dependency_task_ids.join(", ") : "None"}</dd></div>
       </dl>

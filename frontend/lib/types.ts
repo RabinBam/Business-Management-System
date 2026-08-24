@@ -1,6 +1,7 @@
 export type WorkflowStatus =
   | "CREATED" | "SEGMENTING" | "ASSIGNING" | "EXECUTING" | "REVIEWING"
-  | "REPORTING" | "MARKETING" | "FINAL_REVIEW" | "COMPLETED" | "FAILED";
+  | "REPORTING" | "MARKETING" | "FINAL_REVIEW" | "COMPLETED" | "FAILED"
+  | "CANCELLED";
 
 export type TaskStatus = "PENDING" | "RUNNING" | "COMPLETED" | "FAILED";
 
@@ -42,6 +43,42 @@ export interface Task {
   expected_output: string;
   acceptance_criteria: string[];
   status: TaskStatus;
+  estimated_cost?: number;
+  assigned_worker_id?: string | null;
+  assigned_worker_name?: string | null;
+  assignment_reason?: string | null;
+  revision_count?: number;
+  revision_instructions?: string[];
+}
+
+export interface Worker {
+  id: string;
+  name: string;
+  role: string;
+  experience_years: number;
+  skills: string[];
+  department: string;
+  availability: "AVAILABLE" | "BUSY" | string;
+  workload_percent: number;
+  active_tasks: number;
+}
+
+export interface WorkerResult {
+  task_id: string;
+  worker_id: string;
+  summary: string;
+  output: Record<string, unknown>;
+  evidence: string[];
+  cost: number;
+  assignment_reason: string;
+}
+
+export interface ManagementReview {
+  task_id: string;
+  decision: "APPROVED" | "REVISION_REQUIRED";
+  feedback: string;
+  acceptance_criteria_met: string[];
+  revision_instructions: string[];
 }
 
 export interface FinancialSummary { total_budget: number; planned_spend: number; remaining_budget: number; }
@@ -53,5 +90,20 @@ export interface MarketingPlan { workflow_id: string; approved_budget: number; o
 export type WatcherState = "IDLE" | "ACTIVE";
 export interface WatcherEvent { workflow_id: string | null; component: string; event_type: string; message: string; retry_count: number; resolved: boolean; created_at: string; }
 export interface WatcherStatus { state: WatcherState; active_incidents: number; events: WatcherEvent[]; }
+export interface DashboardMetrics {
+  workflow_count: number;
+  active_workflows: number;
+  completed_workflows: number;
+  failed_workflows: number;
+  total_budget: number;
+  planned_spend: number;
+  available_budget: number;
+  predicted_growth_percent: number;
+}
+export interface Dashboard {
+  metrics: DashboardMetrics;
+  recent_workflows: Workflow[];
+  recent_events: WatcherEvent[];
+}
 export interface ApiResponse<T> { success: true; data: T; message: string; }
 

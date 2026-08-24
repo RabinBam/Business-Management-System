@@ -1,9 +1,13 @@
 import type {
   ApiResponse,
+  Dashboard,
+  ManagementReview,
   MarketingPlan,
   Report,
   Task,
   WatcherStatus,
+  Worker,
+  WorkerResult,
   Workflow,
   WorkflowCreate,
 } from "./types";
@@ -23,6 +27,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     ...init,
     headers: { "Content-Type": "application/json", ...init?.headers },
     cache: "no-store",
+    credentials: "include",
   });
   const body = await response.json().catch(() => null);
   if (!response.ok) {
@@ -46,12 +51,44 @@ export function getWorkflow(id: string) {
   return request<Workflow>(`/workflows/${id}`);
 }
 
+export function listWorkflows() {
+  return request<Workflow[]>("/workflows");
+}
+
 export function runWorkflow(id: string) {
   return request<Workflow>(`/workflows/${id}/run`, { method: "POST" });
 }
 
+export function refineWorkflow(id: string) {
+  return request<Workflow>(`/workflows/${id}/refine`, { method: "POST" });
+}
+
+export function retryWorkflow(id: string) {
+  return request<Workflow>(`/workflows/${id}/retry`, { method: "POST" });
+}
+
+export function cancelWorkflow(id: string) {
+  return request<Workflow>(`/workflows/${id}/cancel`, { method: "POST" });
+}
+
 export function getTasks(id: string) {
   return request<Task[]>(`/workflows/${id}/tasks`);
+}
+
+export function getWorkerResults(id: string) {
+  return request<WorkerResult[]>(`/workflows/${id}/results`);
+}
+
+export function getManagementReviews(id: string) {
+  return request<ManagementReview[]>(`/workflows/${id}/reviews`);
+}
+
+export function getWorkers() {
+  return request<Worker[]>("/workers");
+}
+
+export function getDashboard() {
+  return request<Dashboard>("/dashboard");
 }
 
 export function getReport(id: string) {

@@ -19,7 +19,7 @@ export function WorkflowPipeline({ status }: { status: WorkflowStatus }) {
     <section className="pipeline" aria-label="Workflow progress">
       {stages.map((stage, index) => {
         const stageIndex = Math.min(...stage.statuses.map((item) => order.indexOf(item)));
-        const state = status === "FAILED" ? "waiting" : stage.statuses.includes(status) ? "active" : stageIndex < activeIndex ? "complete" : "waiting";
+        const state = status === "FAILED" || status === "CANCELLED" ? "waiting" : status === "COMPLETED" ? "complete" : stage.statuses.includes(status) ? "active" : stageIndex < activeIndex ? "complete" : "waiting";
         return (
           <div className={`pipelineStage ${state}`} key={stage.label}>
             <span>{state === "complete" ? "✓" : String(index + 1).padStart(2, "0")}</span>

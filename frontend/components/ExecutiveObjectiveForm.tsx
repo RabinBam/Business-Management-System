@@ -13,7 +13,7 @@ function defaultDeadline() {
   return date.toISOString().slice(0, 10);
 }
 
-export function ExecutiveObjectiveForm() {
+export function ExecutiveObjectiveForm({ onCreated }: { onCreated?: () => void }) {
   const router = useRouter();
   const [form, setForm] = useState({
     title: "",
@@ -39,6 +39,7 @@ export function ExecutiveObjectiveForm() {
       });
       setWorkflow(created);
       window.localStorage.setItem("byapari:lastWorkflowId", created.id);
+      onCreated?.();
     } catch (reason) {
       setError(
         reason instanceof Error ? reason.message : "Unable to create workflow.",
