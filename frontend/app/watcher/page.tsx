@@ -19,7 +19,7 @@ export default async function WatcherPage({
           </p>
         </div>
       </header>
-      <WatcherPanel demo={demo} />
+      <WatcherPanel/>
     </AppShell>
   );
 }
