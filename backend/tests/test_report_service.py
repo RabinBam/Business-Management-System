@@ -2,7 +2,7 @@
 
 from datetime import date, timedelta
 
-from app.schemas.report import FinancialSummary, Report, SalesPrediction
+from app.schemas.report import Report, SalesPrediction
 from app.schemas.workflow import WorkflowRead
 from app.services.report_service import ReportService
 
@@ -93,7 +93,6 @@ class TestReportEndpoint:
     """Integration test through the FastAPI test client."""
 
     def test_report_for_existing_workflow(self) -> None:
-        from datetime import timedelta
         from fastapi.testclient import TestClient
         from app.main import app
 

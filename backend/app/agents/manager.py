@@ -1,7 +1,3 @@
-<<<<<<< HEAD
-"""Person 1 starting point: task refinement, review, and executive summary."""
-
-=======
 import json
 from collections.abc import Iterable, Mapping
 
@@ -161,4 +157,3 @@ async def create_executive_summary(
         marketing=marketing,
         reviews=reviews,
     )
->>>>>>> 3ffc1b091eeeb5d0c2ea50affbb8c90e7a14e16e
