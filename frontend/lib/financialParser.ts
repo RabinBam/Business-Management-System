@@ -1,4 +1,4 @@
-import * as XLSX from "xlsx";
+import { strFromU8, unzipSync } from "fflate";
 
 export interface FinancialDataRow {
   recordType?: "YEARLY" | "MONTHLY";
@@ -125,12 +125,119 @@ export function deriveFinancialMetrics(financialRows: FinancialDataRow[]) {
 export async function parseFinancialFile(file: File): Promise<FinancialDataRow[]> {
   const extension = file.name.split(".").pop()?.toLowerCase();
   if (extension !== "csv" && extension !== "xlsx") throw new Error("Unsupported file type. Choose a CSV or XLSX file.");
-  // Keep CSV period labels such as "2026-01" as text instead of Excel date serials.
-  const workbook = XLSX.read(await file.arrayBuffer(), { type: "array", raw: true });
-  const firstSheet = workbook.SheetNames[0];
-  if (!firstSheet) throw new Error("This workbook does not contain a worksheet.");
-  const rawRows = XLSX.utils.sheet_to_json<Record<string, unknown>>(workbook.Sheets[firstSheet], { defval: "", raw: true });
+  if (file.size > 10_000_000) throw new Error("This file exceeds the 10 MB upload limit.");
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  const rawRows = extension === "csv" ? parseCsv(strFromU8(bytes)) : parseXlsx(bytes);
   return normalizeFinancialRows(rawRows);
+}
+
+function parseCsv(source: string): Record<string, unknown>[] {
+  const table: string[][] = [];
+  let row: string[] = [];
+  let value = "";
+  let quoted = false;
+  for (let index = 0; index < source.length; index += 1) {
+    const character = source[index];
+    if (character === '"') {
+      if (quoted && source[index + 1] === '"') {
+        value += '"';
+        index += 1;
+      } else quoted = !quoted;
+    } else if (character === "," && !quoted) {
+      row.push(value);
+      value = "";
+    } else if ((character === "\n" || character === "\r") && !quoted) {
+      if (character === "\r" && source[index + 1] === "\n") index += 1;
+      row.push(value);
+      if (row.some((cell) => cell.trim())) table.push(row);
+      row = [];
+      value = "";
+    } else value += character;
+  }
+  if (quoted) throw new Error("This CSV contains an unterminated quoted value.");
+  row.push(value);
+  if (row.some((cell) => cell.trim())) table.push(row);
+  const headers = table.shift()?.map((cell) => cell.replace(/^\uFEFF/, "").trim()) ?? [];
+  if (!headers.length) return [];
+  return table.map((cells) =>
+    Object.fromEntries(headers.map((header, index) => [header, cells[index] ?? ""])),
+  );
+}
+
+function xmlDocument(source: string, label: string): Document {
+  const document = new DOMParser().parseFromString(source, "application/xml");
+  if (document.querySelector("parsererror")) throw new Error(`The XLSX ${label} is invalid.`);
+  return document;
+}
+
+function normalizeZipPath(base: string, target: string): string {
+  const parts = (target.startsWith("/") ? target.slice(1) : `${base}/${target}`).split("/");
+  const normalized: string[] = [];
+  for (const part of parts) {
+    if (!part || part === ".") continue;
+    if (part === "..") normalized.pop();
+    else normalized.push(part);
+  }
+  return normalized.join("/");
+}
+
+function columnIndex(reference: string): number {
+  const letters = reference.match(/^[A-Z]+/i)?.[0].toUpperCase() ?? "A";
+  return [...letters].reduce((total, letter) => total * 26 + letter.charCodeAt(0) - 64, 0) - 1;
+}
+
+function parseXlsx(bytes: Uint8Array): Record<string, unknown>[] {
+  const archive = unzipSync(bytes, {
+    filter: (entry) =>
+      entry.originalSize <= 5_000_000 &&
+      (/^xl\/(?:workbook|sharedStrings)\.xml$/.test(entry.name) ||
+        entry.name === "xl/_rels/workbook.xml.rels" ||
+        /^xl\/worksheets\/[^/]+\.xml$/.test(entry.name)),
+  });
+  const expandedSize = Object.values(archive).reduce((sum, item) => sum + item.length, 0);
+  if (expandedSize > 20_000_000) throw new Error("The XLSX expands beyond the 20 MB safety limit.");
+  const workbookBytes = archive["xl/workbook.xml"];
+  const relationsBytes = archive["xl/_rels/workbook.xml.rels"];
+  if (!workbookBytes || !relationsBytes) throw new Error("This XLSX is missing workbook metadata.");
+
+  const workbook = xmlDocument(strFromU8(workbookBytes), "workbook metadata");
+  const firstSheet = workbook.getElementsByTagName("sheet")[0];
+  const relationshipId = firstSheet?.getAttribute("r:id") ?? firstSheet?.getAttribute("id");
+  if (!relationshipId) throw new Error("This workbook does not contain a worksheet.");
+  const relations = xmlDocument(strFromU8(relationsBytes), "relationships");
+  const relation = [...relations.getElementsByTagName("Relationship")].find(
+    (item) => item.getAttribute("Id") === relationshipId,
+  );
+  const target = relation?.getAttribute("Target");
+  if (!target) throw new Error("The first worksheet could not be resolved.");
+  const sheetPath = normalizeZipPath("xl", target);
+  const sheetBytes = archive[sheetPath];
+  if (!sheetBytes) throw new Error("The first worksheet is missing from this XLSX.");
+
+  const sharedBytes = archive["xl/sharedStrings.xml"];
+  const sharedStrings = sharedBytes
+    ? [...xmlDocument(strFromU8(sharedBytes), "shared strings").getElementsByTagName("si")]
+        .map((item) => [...item.getElementsByTagName("t")].map((text) => text.textContent ?? "").join(""))
+    : [];
+  const sheet = xmlDocument(strFromU8(sheetBytes), "worksheet");
+  const table = [...sheet.getElementsByTagName("row")].map((rowElement) => {
+    const cells: unknown[] = [];
+    for (const cell of rowElement.getElementsByTagName("c")) {
+      const index = columnIndex(cell.getAttribute("r") ?? "A1");
+      const type = cell.getAttribute("t");
+      const raw = cell.getElementsByTagName("v")[0]?.textContent ?? "";
+      const inline = [...cell.getElementsByTagName("t")].map((item) => item.textContent ?? "").join("");
+      if (type === "s") cells[index] = sharedStrings[Number(raw)] ?? "";
+      else if (type === "inlineStr" || type === "str") cells[index] = inline || raw;
+      else if (type === "b") cells[index] = raw === "1";
+      else cells[index] = raw === "" ? "" : Number.isFinite(Number(raw)) ? Number(raw) : raw;
+    }
+    return cells;
+  });
+  const headers = (table.shift() ?? []).map((value) => String(value ?? "").trim());
+  return table
+    .filter((cells) => cells.some((value) => String(value ?? "").trim()))
+    .map((cells) => Object.fromEntries(headers.map((header, index) => [header, cells[index] ?? ""])));
 }
 
 export const financialRequiredColumns = [...requiredColumns];

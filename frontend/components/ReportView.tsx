@@ -18,6 +18,7 @@ import {
   FinancialDataSource,
   type FinancialDatasetSource,
 } from "./FinancialDataSource";
+import { FinancialReportDownloadButton } from "./reports/FinancialReportExport";
 type ActiveSource = "demo" | FinancialDatasetSource;
 export function ReportView({ id }: { id: string }) {
   const isDemo = id === "demo";
@@ -113,7 +114,12 @@ export function ReportView({ id }: { id: string }) {
         </div>
         <div className="reportActions">
           <FinancialDataSource demo={isDemo} onApply={applyRows} />
-          <button className="secondaryButton">⇩ Export PDF</button>
+          <FinancialReportDownloadButton
+            className="secondaryButton"
+            datasetName={datasetName}
+            report={report}
+            rows={local ? financialRows : []}
+          />
         </div>
       </header>
       {local && (
