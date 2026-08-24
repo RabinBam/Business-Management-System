@@ -1,6 +1,5 @@
 # Stage 1: Build dependencies
 FROM python:3.12-slim AS builder
-RUN apt-get update && apt-get install -y --no-install-recommends curl && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 
 # Create a virtual environment and make sure we use it
