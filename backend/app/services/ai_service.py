@@ -194,6 +194,38 @@ class MockAIProvider:
                 "major_risks": [],
                 "management_recommendation": "Proceed with the approved plan and monitor delivery.",
             }
+        if schema.__name__ == "MarketingPlan":
+            context = _extract_json_payload(user_prompt, "MARKETING_CONTEXT")
+            budget = max(0.0, float(context.get("approved_budget", 0.0)))
+            return {
+                "workflow_id": str(context.get("workflow_id", "unknown-workflow")),
+                "approved_budget": budget,
+                "objective": str(context.get("objective", "Approved marketing objective")),
+                "target_audience": "Customers most aligned with the approved objective",
+                "allocations": [
+                    {
+                        "channel": "Digital advertising",
+                        "amount": round(budget * 0.4, 2),
+                        "reason": "Reach qualified audiences with measurable campaigns.",
+                    },
+                    {
+                        "channel": "Content and search",
+                        "amount": round(budget * 0.3, 2),
+                        "reason": "Capture existing demand and explain the offer.",
+                    },
+                    {
+                        "channel": "Partnerships",
+                        "amount": round(budget * 0.2, 2),
+                        "reason": "Extend trusted distribution without exceeding budget.",
+                    },
+                ],
+                "timeline": [
+                    "Week 1: prepare assets and measurement",
+                    "Week 2: launch controlled campaigns",
+                    "Weeks 3-4: optimize and report outcomes",
+                ],
+                "expected_outcome": "Measurable progress toward the approved objective.",
+            }
         raise AIResponseError(f"No mock response is registered for {schema.__name__}")
 
 

@@ -2,12 +2,16 @@ from fastapi import APIRouter, HTTPException, status
 
 from app.schemas.common import ApiResponse
 from app.schemas.marketing import MarketingPlan
+from app.services.marketing_service import marketing_service
 
 router = APIRouter(prefix="/workflows", tags=["marketing"])
 
 
 @router.get("/{workflow_id}/marketing", response_model=ApiResponse[MarketingPlan])
 async def get_marketing_plan(workflow_id: str) -> ApiResponse[MarketingPlan]:
+    plan = marketing_service.get_plan(workflow_id)
+    if plan is not None:
+        return ApiResponse(data=plan, message="Marketing plan loaded")
     raise HTTPException(
         status_code=status.HTTP_404_NOT_FOUND,
         detail={
@@ -30,10 +34,10 @@ async def update_marketing_plan(
             },
         )
     try:
-        plan.validate_budget()
+        saved = marketing_service.save_plan(plan)
     except ValueError as exc:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail={"code": "BUDGET_EXCEEDED", "message": str(exc)},
         ) from exc
-    return ApiResponse(data=plan, message="Marketing plan validated")
+    return ApiResponse(data=saved, message="Marketing plan saved")

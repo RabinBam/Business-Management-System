@@ -1,44 +1,62 @@
-from typing import Dict, Optional
-from app.schemas.marketing import MarketingPlan
+from threading import RLock
+
 from app.agents.marketing_agent import MarketingAgent
+from app.config import settings
+from app.schemas.marketing import MarketingPlan
+from app.services.ai_service import get_ai_service
+
 
 class MarketingService:
-    def __init__(self, agent: Optional[MarketingAgent] = None) -> None:
-        # In-memory store mapping workflow_id to MarketingPlan
-        self._plans: Dict[str, MarketingPlan] = {}
+    """Generate, validate, and persist marketing plans in memory."""
+
+    def __init__(self, agent: MarketingAgent | None = None) -> None:
+        self._plans: dict[str, MarketingPlan] = {}
         self._agent = agent
+        self._lock = RLock()
 
     def set_agent(self, agent: MarketingAgent) -> None:
-        """Inject the agent (useful for initialization when the AI provider is ready)."""
         self._agent = agent
 
-    def get_plan(self, workflow_id: str) -> Optional[MarketingPlan]:
-        """Retrieve a marketing plan by workflow ID."""
-        return self._plans.get(workflow_id)
+    def get_plan(self, workflow_id: str) -> MarketingPlan | None:
+        with self._lock:
+            plan = self._plans.get(workflow_id)
+            return plan.model_copy(deep=True) if plan is not None else None
 
     def save_plan(self, plan: MarketingPlan) -> MarketingPlan:
-        """Save or update a marketing plan."""
-        # Note: The router already handles budget validation via Pydantic
-        self._plans[plan.workflow_id] = plan
-        return plan
+        plan.validate_budget()
+        stored = plan.model_copy(deep=True)
+        with self._lock:
+            self._plans[plan.workflow_id] = stored
+        return stored.model_copy(deep=True)
 
-    async def generate_plan(self, workflow_id: str, product_brief: str, max_budget: float, **kwargs) -> MarketingPlan:
-        """Generate a new marketing plan using the AI agent."""
-        if not self._agent:
-            raise RuntimeError("MarketingAgent is not initialized. Cannot generate plan.")
-            
-        # Call the agent (which includes your with_retry_and_watch decorator)
+    async def generate_plan(
+        self,
+        *,
+        workflow_id: str,
+        product_brief: str,
+        max_budget: float,
+        approved_context: dict[str, object] | None = None,
+    ) -> MarketingPlan:
+        if self._agent is None:
+            self._agent = MarketingAgent(
+                get_ai_service(),
+                model=settings.ai_primary_model or None,
+            )
         plan = await self._agent.generate_plan(
-            product_brief=product_brief, 
+            workflow_id=workflow_id,
+            product_brief=product_brief,
             max_budget=max_budget,
-            **kwargs
+            approved_context=approved_context,
         )
-        
-        # Ensure the workflow_id is attached to the newly generated plan
-        plan.workflow_id = workflow_id
-        
-        # Save to memory and return
         return self.save_plan(plan)
 
-# Export a singleton instance so the router can import it directly
+    def clear(self) -> None:
+        with self._lock:
+            self._plans.clear()
+
+
 marketing_service = MarketingService()
+
+
+def get_marketing_service() -> MarketingService:
+    return marketing_service

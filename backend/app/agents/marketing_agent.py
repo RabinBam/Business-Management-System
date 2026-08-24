@@ -1,25 +1,49 @@
+import json
+from collections.abc import Mapping
+
 from app.schemas.marketing import MarketingPlan
-from app.agents.watcher import with_retry_and_watch
+from app.services.ai_service import AIService
+
+MARKETING_SYSTEM_PROMPT = """You are AegisFlow's marketing planning agent.
+Use only the supplied management-approved objective and report summary. Create
+a practical plan with an audience, channel allocations, timeline, and expected
+outcome. Never exceed the approved budget and do not invent access to private
+financial details that are not in the supplied context."""
+
 
 class MarketingAgent:
-    def __init__(self, ai_provider):
-        self.ai_provider = ai_provider
+    """Generate schema-validated plans through the shared AI service boundary."""
 
-    @with_retry_and_watch(service_name="MarketingAgent")
-    async def generate_plan(self, product_brief: str, max_budget: float, **kwargs) -> MarketingPlan:
-        # 1. Construct the prompt for the AI
-        prompt = (
-            f"Create a marketing plan for the following product: {product_brief}. "
-            f"The strict maximum budget is ${max_budget}. "
-            f"Return the response as a JSON object matching this schema: "
-            f"id (string), campaign_name (string), target_audience (list of strings), "
-            f"estimated_budget (number), max_budget (number), and strategy (string)."
+    def __init__(self, ai_service: AIService, *, model: str | None = None) -> None:
+        self._ai_service = ai_service
+        self._model = model
+
+    async def generate_plan(
+        self,
+        *,
+        workflow_id: str,
+        product_brief: str,
+        max_budget: float,
+        approved_context: Mapping[str, object] | None = None,
+    ) -> MarketingPlan:
+        context: dict[str, object] = {
+            "workflow_id": workflow_id,
+            "objective": product_brief,
+            "approved_budget": max_budget,
+            "approved_context": dict(approved_context or {}),
+        }
+        plan = await self._ai_service.generate_structured(
+            system_prompt=MARKETING_SYSTEM_PROMPT,
+            user_prompt="MARKETING_CONTEXT:\n" + json.dumps(context, ensure_ascii=False),
+            schema=MarketingPlan,
+            model=self._model,
         )
-        
-        # 2. Call AI provider
-        raw_response = await self.ai_provider.generate(prompt=prompt, **kwargs)
-        
-        # 3. Parse and validate using your Pydantic schema
-        plan = MarketingPlan.model_validate_json(raw_response)
-        
-        return plan
+        authoritative = plan.model_copy(
+            update={
+                "workflow_id": workflow_id,
+                "approved_budget": max_budget,
+                "objective": product_brief,
+            }
+        )
+        authoritative.validate_budget()
+        return authoritative
