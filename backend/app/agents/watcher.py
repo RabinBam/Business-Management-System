@@ -1,40 +1,72 @@
 import functools
-import uuid
-from datetime import datetime, timezone
+import inspect
+from collections.abc import Awaitable, Callable
+from typing import cast
 
-from app.schemas.watcher import WatcherEvent
-from app.services.watcher_service import watcher_service
+from app.services.watcher_service import WatcherService, watcher_service
 
-def with_retry_and_watch(service_name: str, max_retries: int = 3):
-    def decorator(func):
+
+async def execute_with_watch[T](
+    component: str,
+    operation: Callable[[], Awaitable[T] | T],
+    *,
+    workflow_id: str | None = None,
+    max_retries: int = 1,
+    service: WatcherService = watcher_service,
+) -> T:
+    """Execute an operation and record retry, failure, and recovery events."""
+
+    if max_retries < 0:
+        raise ValueError("max_retries cannot be negative")
+
+    for attempt in range(max_retries + 1):
+        try:
+            value = operation()
+            result = await value if inspect.isawaitable(value) else value
+        except Exception as exc:
+            final_attempt = attempt == max_retries
+            service.record_event(
+                workflow_id=workflow_id,
+                component=component,
+                event_type="FAILED" if final_attempt else "RETRY",
+                message=f"{exc.__class__.__name__}: {exc}",
+                retry_count=attempt,
+            )
+            if final_attempt:
+                raise
+        else:
+            if attempt:
+                service.resolve(workflow_id=workflow_id, component=component)
+                service.record_event(
+                    workflow_id=workflow_id,
+                    component=component,
+                    event_type="RECOVERED",
+                    message=f"Recovered on attempt {attempt + 1}",
+                    retry_count=attempt,
+                    resolved=True,
+                )
+            return cast(T, result)
+
+    raise RuntimeError("Retry loop exited unexpectedly")
+
+
+def with_retry_and_watch[**P, T](
+    service_name: str,
+    max_retries: int = 1,
+) -> Callable[[Callable[P, Awaitable[T]]], Callable[P, Awaitable[T]]]:
+    """Decorator form used by agent operations that expose ``workflow_id``."""
+
+    def decorator(func: Callable[P, Awaitable[T]]) -> Callable[P, Awaitable[T]]:
         @functools.wraps(func)
-        async def wrapper(*args, **kwargs):
-            for attempt in range(1, max_retries + 1):
-                try:
-                    result = await func(*args, **kwargs)
-                    if attempt > 1:
-                        # Record Recovery if it succeeded after a failure
-                        watcher_service.record(WatcherEvent(
-                            id=str(uuid.uuid4()),
-                            timestamp=datetime.now(timezone.utc),
-                            event_type="recovery",
-                            service=service_name,
-                            details={"message": f"Recovered on attempt {attempt}"},
-                            resolved=True
-                        ))
-                    return result
-                except Exception as e:
-                    # Record Failure or Retry
-                    is_final_failure = attempt == max_retries
-                    watcher_service.record(WatcherEvent(
-                        id=str(uuid.uuid4()),
-                        timestamp=datetime.now(timezone.utc),
-                        event_type="failure" if is_final_failure else "retry",
-                        service=service_name,
-                        details={"error": str(e), "attempt": attempt},
-                        resolved=False
-                    ))
-                    if is_final_failure:
-                        raise e
+        async def wrapper(*args: P.args, **kwargs: P.kwargs) -> T:
+            workflow_id = kwargs.get("workflow_id")
+            return await execute_with_watch(
+                service_name,
+                lambda: func(*args, **kwargs),
+                workflow_id=str(workflow_id) if workflow_id is not None else None,
+                max_retries=max_retries,
+            )
+
         return wrapper
+
     return decorator
