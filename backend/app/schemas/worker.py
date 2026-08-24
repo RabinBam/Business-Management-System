@@ -15,4 +15,13 @@ class WorkerResult(BaseModel):
     summary: str
     output: dict[str, object] = Field(default_factory=dict)
     evidence: list[str] = Field(default_factory=list)
+    cost: float = Field(default=0, ge=0)
+    assignment_reason: str = ""
+
+
+class WorkerRead(WorkerProfile):
+    department: str
+    availability: str
+    workload_percent: int = Field(ge=0, le=100)
+    active_tasks: int = Field(ge=0)
 

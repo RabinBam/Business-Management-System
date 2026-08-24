@@ -5,8 +5,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from app.schemas.task import GeneratedTask
-from app.schemas.worker import WorkerProfile
+from app.schemas.task import GeneratedTask, TaskRead, TaskStatus
+from app.schemas.worker import WorkerProfile, WorkerRead
 
 _DATA_DIR = Path(__file__).resolve().parent.parent.parent / "data"
 
@@ -37,6 +37,26 @@ class WorkerService:
                 return profile
         return None
 
+    def get_directory(self, tasks: list[TaskRead]) -> list[WorkerRead]:
+        active_counts: dict[str, int] = {}
+        for task in tasks:
+            if task.assigned_worker_id and task.status is TaskStatus.RUNNING:
+                active_counts[task.assigned_worker_id] = (
+                    active_counts.get(task.assigned_worker_id, 0) + 1
+                )
+        return [
+            WorkerRead(
+                **profile.model_dump(),
+                department=_department_for_role(profile.role),
+                availability=(
+                    "BUSY" if active_counts.get(profile.id, 0) else "AVAILABLE"
+                ),
+                workload_percent=min(active_counts.get(profile.id, 0) * 25, 100),
+                active_tasks=active_counts.get(profile.id, 0),
+            )
+            for profile in self._profiles
+        ]
+
     def match_worker(self, task: GeneratedTask) -> tuple[WorkerProfile, str]:
         """Find the best worker for *task* using deterministic scoring.
 
@@ -52,9 +72,11 @@ class WorkerService:
             raise ValueError("No worker profiles available.")
 
         # Step 1 — filter by required_role (case-insensitive).
+        required_role = _normalize_role(task.required_role)
         role_matches = [
-            p for p in self._profiles
-            if p.role.lower() == task.required_role.lower()
+            profile
+            for profile in self._profiles
+            if _normalize_role(profile.role) == required_role
         ]
 
         if not role_matches:
@@ -147,3 +169,20 @@ def get_worker_service() -> WorkerService:
     if _worker_service is None:
         _worker_service = WorkerService()
     return _worker_service
+
+
+def _department_for_role(role: str) -> str:
+    normalized = role.replace("_", " ").title()
+    mapping = {
+        "Developer": "Engineering",
+        "Data Scientist": "Analytics",
+        "Analyst": "Finance",
+        "Marketer": "Marketing",
+        "Designer": "Design",
+        "Project Manager": "Operations",
+    }
+    return mapping.get(normalized, normalized)
+
+
+def _normalize_role(role: str) -> str:
+    return " ".join(role.replace("_", " ").split()).casefold()

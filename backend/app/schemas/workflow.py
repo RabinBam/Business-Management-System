@@ -15,6 +15,7 @@ class WorkflowStatus(StrEnum):
     FINAL_REVIEW = "FINAL_REVIEW"
     COMPLETED = "COMPLETED"
     FAILED = "FAILED"
+    CANCELLED = "CANCELLED"
 
 
 class WorkflowCreate(BaseModel):
@@ -55,3 +56,11 @@ class WorkflowRead(WorkflowCreate):
     completed_at: datetime | None = None
     failure: WorkflowFailure | None = None
     executive_summary: ExecutiveSummary | None = None
+
+
+class WorkflowStatusRead(BaseModel):
+    id: str
+    status: WorkflowStatus
+    current_stage: str
+    updated_at: datetime
+    failure: WorkflowFailure | None = None

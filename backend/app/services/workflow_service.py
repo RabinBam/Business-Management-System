@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import asyncio
 import inspect
 from collections.abc import Awaitable, Callable
@@ -9,6 +11,7 @@ from uuid import uuid4
 from app.agents.manager import Manager
 from app.agents.orchestrator import Orchestrator
 from app.config import settings
+from app.database import SQLiteJsonStore, get_json_store
 from app.schemas.marketing import MarketingPlan
 from app.schemas.report import Report
 from app.schemas.task import ManagementDecision, ManagementReview, TaskRead, TaskStatus
@@ -33,19 +36,54 @@ STAGE_NAMES: dict[WorkflowStatus, str] = {
     WorkflowStatus.FINAL_REVIEW: "management_final_review",
     WorkflowStatus.COMPLETED: "completed",
     WorkflowStatus.FAILED: "failed",
+    WorkflowStatus.CANCELLED: "cancelled",
 }
 
 ALLOWED_TRANSITIONS: dict[WorkflowStatus, set[WorkflowStatus]] = {
-    WorkflowStatus.CREATED: {WorkflowStatus.SEGMENTING, WorkflowStatus.FAILED},
-    WorkflowStatus.SEGMENTING: {WorkflowStatus.ASSIGNING, WorkflowStatus.FAILED},
-    WorkflowStatus.ASSIGNING: {WorkflowStatus.EXECUTING, WorkflowStatus.FAILED},
-    WorkflowStatus.EXECUTING: {WorkflowStatus.REVIEWING, WorkflowStatus.FAILED},
-    WorkflowStatus.REVIEWING: {WorkflowStatus.REPORTING, WorkflowStatus.FAILED},
-    WorkflowStatus.REPORTING: {WorkflowStatus.MARKETING, WorkflowStatus.FAILED},
-    WorkflowStatus.MARKETING: {WorkflowStatus.FINAL_REVIEW, WorkflowStatus.FAILED},
-    WorkflowStatus.FINAL_REVIEW: {WorkflowStatus.COMPLETED, WorkflowStatus.FAILED},
+    WorkflowStatus.CREATED: {
+        WorkflowStatus.SEGMENTING,
+        WorkflowStatus.FAILED,
+        WorkflowStatus.CANCELLED,
+    },
+    WorkflowStatus.SEGMENTING: {
+        WorkflowStatus.ASSIGNING,
+        WorkflowStatus.FAILED,
+        WorkflowStatus.CANCELLED,
+    },
+    WorkflowStatus.ASSIGNING: {
+        WorkflowStatus.EXECUTING,
+        WorkflowStatus.FAILED,
+        WorkflowStatus.CANCELLED,
+    },
+    WorkflowStatus.EXECUTING: {
+        WorkflowStatus.REVIEWING,
+        WorkflowStatus.FAILED,
+        WorkflowStatus.CANCELLED,
+    },
+    WorkflowStatus.REVIEWING: {
+        WorkflowStatus.EXECUTING,
+        WorkflowStatus.REPORTING,
+        WorkflowStatus.FAILED,
+        WorkflowStatus.CANCELLED,
+    },
+    WorkflowStatus.REPORTING: {
+        WorkflowStatus.MARKETING,
+        WorkflowStatus.FAILED,
+        WorkflowStatus.CANCELLED,
+    },
+    WorkflowStatus.MARKETING: {
+        WorkflowStatus.FINAL_REVIEW,
+        WorkflowStatus.FAILED,
+        WorkflowStatus.CANCELLED,
+    },
+    WorkflowStatus.FINAL_REVIEW: {
+        WorkflowStatus.COMPLETED,
+        WorkflowStatus.FAILED,
+        WorkflowStatus.CANCELLED,
+    },
     WorkflowStatus.COMPLETED: set(),
     WorkflowStatus.FAILED: set(),
+    WorkflowStatus.CANCELLED: set(),
 }
 
 WorkerExecutor = Callable[
@@ -82,6 +120,7 @@ class WorkflowArtifacts:
     reviews: list[ManagementReview] = field(default_factory=list)
     report: Report | None = None
     marketing: MarketingPlan | None = None
+    revision_count: int = 0
 
 
 class WorkflowServiceError(RuntimeError):
@@ -114,6 +153,7 @@ class WorkflowService:
         *,
         ai_service: AIService | None = None,
         collaborators: WorkflowCollaborators | None = None,
+        store: SQLiteJsonStore | None = None,
     ) -> None:
         self._workflows: dict[str, WorkflowRead] = {}
         self._tasks: dict[str, list[TaskRead]] = {}
@@ -123,6 +163,8 @@ class WorkflowService:
         self._ai_service = ai_service
         self._collaborators = collaborators or WorkflowCollaborators()
         self._manager: Manager | None = None
+        self._store = store
+        self._load_state()
 
     def configure_collaborators(self, collaborators: WorkflowCollaborators) -> None:
         self._collaborators = collaborators
@@ -137,7 +179,16 @@ class WorkflowService:
             self._tasks[workflow_id] = []
             self._artifacts[workflow_id] = WorkflowArtifacts()
             self._run_locks[workflow_id] = asyncio.Lock()
+            self._persist_workflow(workflow_id)
         return workflow.model_copy(deep=True)
+
+    def list(self) -> list[WorkflowRead]:
+        with self._lock:
+            workflows = [
+                workflow.model_copy(deep=True)
+                for workflow in self._workflows.values()
+            ]
+        return sorted(workflows, key=lambda item: item.created_at, reverse=True)
 
     def get(self, workflow_id: str) -> WorkflowRead | None:
         with self._lock:
@@ -155,6 +206,20 @@ class WorkflowService:
             tasks = self._tasks.get(workflow_id)
             return [task.model_copy(deep=True) for task in tasks] if tasks is not None else None
 
+    def get_worker_results(self, workflow_id: str) -> list[WorkerResult] | None:
+        with self._lock:
+            artifacts = self._artifacts.get(workflow_id)
+            if artifacts is None:
+                return None
+            return [result.model_copy(deep=True) for result in artifacts.worker_results]
+
+    def get_reviews(self, workflow_id: str) -> list[ManagementReview] | None:
+        with self._lock:
+            artifacts = self._artifacts.get(workflow_id)
+            if artifacts is None:
+                return None
+            return [review.model_copy(deep=True) for review in artifacts.reviews]
+
     def replace_tasks(self, workflow_id: str, tasks: list[TaskRead]) -> list[TaskRead]:
         with self._lock:
             self._require_stored(workflow_id)
@@ -164,7 +229,19 @@ class WorkflowService:
             if len(ids) != len(set(ids)):
                 raise WorkflowValidationError("Task IDs must be unique within a workflow")
             self._tasks[workflow_id] = [task.model_copy(deep=True) for task in tasks]
+            self._persist_workflow(workflow_id)
             return [task.model_copy(deep=True) for task in tasks]
+
+    def delete(self, workflow_id: str) -> None:
+        with self._lock:
+            self._require_stored(workflow_id)
+            self._workflows.pop(workflow_id, None)
+            self._tasks.pop(workflow_id, None)
+            self._artifacts.pop(workflow_id, None)
+            self._run_locks.pop(workflow_id, None)
+            if self._store is not None:
+                for namespace in ("workflows", "workflow_tasks", "workflow_artifacts"):
+                    self._store.delete(namespace, workflow_id)
 
     def transition(self, workflow_id: str, target: WorkflowStatus) -> WorkflowRead:
         with self._lock:
@@ -181,6 +258,9 @@ class WorkflowService:
                 workflow.started_at = now
             if target is WorkflowStatus.COMPLETED:
                 workflow.completed_at = now
+            if target is WorkflowStatus.CANCELLED:
+                workflow.completed_at = now
+            self._persist_workflow(workflow_id)
             updated = workflow.model_copy(deep=True)
         self._record_event(
             workflow_id,
@@ -196,31 +276,53 @@ class WorkflowService:
         async with run_lock:
             return await self._run_workflow_locked(workflow_id)
 
+    async def prepare_workflow(self, workflow_id: str) -> WorkflowRead:
+        run_lock = self._get_run_lock(workflow_id)
+        async with run_lock:
+            workflow = self.require(workflow_id)
+            if workflow.status is WorkflowStatus.CREATED:
+                return await self._plan_and_refine(workflow)
+            if workflow.status is WorkflowStatus.EXECUTING:
+                return workflow
+            raise WorkflowConflictError(
+                f"Workflow cannot be refined from {workflow.status}"
+            )
+
     async def _run_workflow_locked(self, workflow_id: str) -> WorkflowRead:
         workflow = self.require(workflow_id)
-        if workflow.status is WorkflowStatus.COMPLETED:
+        if workflow.status in {WorkflowStatus.COMPLETED, WorkflowStatus.CANCELLED}:
             return workflow
         if workflow.status is WorkflowStatus.FAILED:
             raise WorkflowConflictError("A failed workflow cannot be resumed")
         if workflow.status in {WorkflowStatus.SEGMENTING, WorkflowStatus.ASSIGNING}:
-            raise WorkflowConflictError(
-                f"Workflow cannot resume from transient state {workflow.status}"
-            )
+            workflow = self._recover_planning_stage(workflow)
 
         try:
-            if workflow.status is WorkflowStatus.CREATED:
-                workflow = await self._plan_and_refine(workflow)
-            if workflow.status is WorkflowStatus.EXECUTING:
-                workflow = await self._execute_workers(workflow)
-            if workflow.status is WorkflowStatus.REVIEWING:
-                workflow = await self._review_results(workflow)
-            if workflow.status is WorkflowStatus.REPORTING:
-                workflow = await self._generate_report(workflow)
-            if workflow.status is WorkflowStatus.MARKETING:
-                workflow = await self._generate_marketing(workflow)
-            if workflow.status is WorkflowStatus.FINAL_REVIEW:
-                workflow = await self._finalize(workflow)
-            return workflow
+            for _step in range(20):
+                if workflow.status is WorkflowStatus.CREATED:
+                    workflow = await self._plan_and_refine(workflow)
+                elif workflow.status is WorkflowStatus.EXECUTING:
+                    advanced = await self._execute_workers(workflow)
+                    if advanced.status is workflow.status:
+                        return advanced
+                    workflow = advanced
+                elif workflow.status is WorkflowStatus.REVIEWING:
+                    workflow = await self._review_results(workflow)
+                elif workflow.status is WorkflowStatus.REPORTING:
+                    advanced = await self._generate_report(workflow)
+                    if advanced.status is workflow.status:
+                        return advanced
+                    workflow = advanced
+                elif workflow.status is WorkflowStatus.MARKETING:
+                    advanced = await self._generate_marketing(workflow)
+                    if advanced.status is workflow.status:
+                        return advanced
+                    workflow = advanced
+                elif workflow.status is WorkflowStatus.FINAL_REVIEW:
+                    workflow = await self._finalize(workflow)
+                else:
+                    return workflow
+            raise RuntimeError("Workflow exceeded the maximum state-machine steps")
         except (WorkflowNotFoundError, WorkflowConflictError, WorkflowValidationError):
             raise
         except Exception as exc:
@@ -243,12 +345,20 @@ class WorkflowService:
 
         self.transition(workflow.id, WorkflowStatus.ASSIGNING)
         tasks: list[TaskRead] = []
+        total_weight = sum(max(task.difficulty, 1) for task in generated)
+        execution_budget = workflow.budget * 0.6
         for index, task in enumerate(generated, start=1):
             refined = await manager.refine_task(task)
+            estimated_cost = (
+                execution_budget * max(refined.difficulty, 1) / total_weight
+                if total_weight
+                else 0
+            )
             tasks.append(
                 TaskRead(
                     id=f"task-{index:03d}",
                     workflow_id=workflow.id,
+                    estimated_cost=round(estimated_cost, 2),
                     **refined.model_dump(),
                 )
             )
@@ -266,7 +376,25 @@ class WorkflowService:
         self._artifacts[workflow.id].worker_results = [
             result.model_copy(deep=True) for result in results
         ]
-        self._set_all_task_statuses(workflow.id, TaskStatus.COMPLETED)
+        results_by_task = {result.task_id: result for result in results}
+        completed_tasks: list[TaskRead] = []
+        for task in tasks:
+            result = results_by_task[task.id]
+            assigned_name = result.output.get("assigned_worker")
+            completed_tasks.append(
+                task.model_copy(
+                    update={
+                        "status": TaskStatus.COMPLETED,
+                        "assigned_worker_id": result.worker_id,
+                        "assigned_worker_name": (
+                            str(assigned_name) if assigned_name is not None else None
+                        ),
+                        "assignment_reason": result.assignment_reason,
+                    }
+                )
+            )
+        self.replace_tasks(workflow.id, completed_tasks)
+        self._persist_workflow(workflow.id)
         return self.transition(workflow.id, WorkflowStatus.REVIEWING)
 
     async def _review_results(self, workflow: WorkflowRead) -> WorkflowRead:
@@ -280,10 +408,41 @@ class WorkflowService:
             results=artifacts.worker_results,
         )
         artifacts.reviews = [review.model_copy(deep=True) for review in reviews]
-        if any(
-            review.decision is ManagementDecision.REVISION_REQUIRED for review in reviews
-        ):
-            return workflow
+        revision_reviews = {
+            review.task_id: review
+            for review in reviews
+            if review.decision is ManagementDecision.REVISION_REQUIRED
+        }
+        if revision_reviews:
+            artifacts.revision_count += 1
+            if artifacts.revision_count > settings.management_max_revisions:
+                raise RuntimeError("Management revision limit exceeded")
+            revised_tasks = [
+                task.model_copy(
+                    update={
+                        "status": TaskStatus.PENDING,
+                        "revision_count": task.revision_count + 1,
+                        "revision_instructions": list(
+                            revision_reviews[task.id].revision_instructions
+                        ),
+                    }
+                )
+                if task.id in revision_reviews
+                else task.model_copy(update={"status": TaskStatus.PENDING})
+                for task in tasks
+            ]
+            self.replace_tasks(workflow.id, revised_tasks)
+            artifacts.worker_results = []
+            self._persist_workflow(workflow.id)
+            self._record_event(
+                workflow.id,
+                "manager",
+                "REVISION_REQUESTED",
+                f"Management requested revision cycle {artifacts.revision_count}",
+                artifacts.revision_count,
+            )
+            return self.transition(workflow.id, WorkflowStatus.EXECUTING)
+        self._persist_workflow(workflow.id)
         return self.transition(workflow.id, WorkflowStatus.REPORTING)
 
     async def _generate_report(self, workflow: WorkflowRead) -> WorkflowRead:
@@ -298,6 +457,7 @@ class WorkflowService:
         if report.workflow_id != workflow.id:
             raise WorkflowValidationError("Report belongs to a different workflow")
         artifacts.report = report.model_copy(deep=True)
+        self._persist_workflow(workflow.id)
         return self.transition(workflow.id, WorkflowStatus.MARKETING)
 
     async def _generate_marketing(self, workflow: WorkflowRead) -> WorkflowRead:
@@ -311,6 +471,7 @@ class WorkflowService:
         if marketing.workflow_id != workflow.id:
             raise WorkflowValidationError("Marketing plan belongs to a different workflow")
         artifacts.marketing = marketing.model_copy(deep=True)
+        self._persist_workflow(workflow.id)
         return self.transition(workflow.id, WorkflowStatus.FINAL_REVIEW)
 
     async def _finalize(self, workflow: WorkflowRead) -> WorkflowRead:
@@ -349,6 +510,7 @@ class WorkflowService:
                 message=message,
                 failed_stage=failed_stage,
             )
+            self._persist_workflow(workflow_id)
             failed = workflow.model_copy(deep=True)
         self._record_event(
             workflow_id,
@@ -358,6 +520,44 @@ class WorkflowService:
             0,
         )
         return failed
+
+    def cancel(self, workflow_id: str) -> WorkflowRead:
+        workflow = self.require(workflow_id)
+        if workflow.status in {
+            WorkflowStatus.COMPLETED,
+            WorkflowStatus.FAILED,
+            WorkflowStatus.CANCELLED,
+        }:
+            raise WorkflowConflictError(
+                f"Workflow cannot be cancelled from {workflow.status}"
+            )
+        return self.transition(workflow_id, WorkflowStatus.CANCELLED)
+
+    def retry_failed(self, workflow_id: str) -> WorkflowRead:
+        with self._lock:
+            workflow = self._require_stored(workflow_id)
+            if workflow.status is not WorkflowStatus.FAILED or workflow.failure is None:
+                raise WorkflowConflictError("Only a failed workflow can be retried")
+            target = workflow.failure.failed_stage
+            if target in {WorkflowStatus.SEGMENTING, WorkflowStatus.ASSIGNING}:
+                target = WorkflowStatus.CREATED
+                self._tasks[workflow_id] = []
+                self._artifacts[workflow_id] = WorkflowArtifacts()
+            workflow.status = target
+            workflow.current_stage = STAGE_NAMES[target]
+            workflow.failure = None
+            workflow.completed_at = None
+            workflow.updated_at = datetime.now(UTC)
+            self._persist_workflow(workflow_id)
+            retried = workflow.model_copy(deep=True)
+        self._record_event(
+            workflow_id,
+            "workflow_service",
+            "RETRY_REQUESTED",
+            f"Workflow restored to {target}",
+            0,
+        )
+        return retried
 
     def store_executive_summary(
         self,
@@ -372,6 +572,7 @@ class WorkflowService:
                 )
             workflow.executive_summary = summary.model_copy(deep=True)
             workflow.updated_at = datetime.now(UTC)
+            self._persist_workflow(workflow_id)
             return workflow.model_copy(deep=True)
 
     def clear(self) -> None:
@@ -382,6 +583,107 @@ class WorkflowService:
             self._tasks.clear()
             self._artifacts.clear()
             self._run_locks.clear()
+            if self._store is not None:
+                for namespace in ("workflows", "workflow_tasks", "workflow_artifacts"):
+                    self._store.clear_namespace(namespace)
+
+    def _load_state(self) -> None:
+        if self._store is None:
+            return
+        for workflow_id, payload in self._store.list("workflows"):
+            workflow = WorkflowRead.model_validate(payload)
+            tasks_payload = self._store.get("workflow_tasks", workflow_id) or {}
+            artifact_payload = self._store.get("workflow_artifacts", workflow_id) or {}
+            self._workflows[workflow_id] = workflow
+            self._tasks[workflow_id] = [
+                TaskRead.model_validate(task)
+                for task in tasks_payload.get("items", [])
+            ]
+            self._artifacts[workflow_id] = WorkflowArtifacts(
+                worker_results=[
+                    WorkerResult.model_validate(result)
+                    for result in artifact_payload.get("worker_results", [])
+                ],
+                reviews=[
+                    ManagementReview.model_validate(review)
+                    for review in artifact_payload.get("reviews", [])
+                ],
+                report=(
+                    Report.model_validate(artifact_payload["report"])
+                    if artifact_payload.get("report") is not None
+                    else None
+                ),
+                marketing=(
+                    MarketingPlan.model_validate(artifact_payload["marketing"])
+                    if artifact_payload.get("marketing") is not None
+                    else None
+                ),
+                revision_count=int(artifact_payload.get("revision_count", 0)),
+            )
+            self._run_locks[workflow_id] = asyncio.Lock()
+
+    def _persist_workflow(self, workflow_id: str) -> None:
+        if self._store is None:
+            return
+        workflow = self._workflows.get(workflow_id)
+        if workflow is None:
+            return
+        tasks = self._tasks.get(workflow_id, [])
+        artifacts = self._artifacts.get(workflow_id, WorkflowArtifacts())
+        self._store.put(
+            "workflows",
+            workflow_id,
+            workflow.model_dump(mode="json"),
+        )
+        self._store.put(
+            "workflow_tasks",
+            workflow_id,
+            {"items": [task.model_dump(mode="json") for task in tasks]},
+        )
+        self._store.put(
+            "workflow_artifacts",
+            workflow_id,
+            {
+                "worker_results": [
+                    result.model_dump(mode="json")
+                    for result in artifacts.worker_results
+                ],
+                "reviews": [
+                    review.model_dump(mode="json") for review in artifacts.reviews
+                ],
+                "report": (
+                    artifacts.report.model_dump(mode="json")
+                    if artifacts.report is not None
+                    else None
+                ),
+                "marketing": (
+                    artifacts.marketing.model_dump(mode="json")
+                    if artifacts.marketing is not None
+                    else None
+                ),
+                "revision_count": artifacts.revision_count,
+            },
+        )
+
+    def _recover_planning_stage(self, workflow: WorkflowRead) -> WorkflowRead:
+        with self._lock:
+            stored = self._require_stored(workflow.id)
+            stored.status = WorkflowStatus.CREATED
+            stored.current_stage = STAGE_NAMES[WorkflowStatus.CREATED]
+            stored.failure = None
+            stored.updated_at = datetime.now(UTC)
+            self._tasks[workflow.id] = []
+            self._artifacts[workflow.id] = WorkflowArtifacts()
+            self._persist_workflow(workflow.id)
+            recovered = stored.model_copy(deep=True)
+        self._record_event(
+            workflow.id,
+            "workflow_service",
+            "RECOVERED",
+            "Recovered interrupted planning stage",
+            0,
+        )
+        return recovered
 
     def _set_all_task_statuses(self, workflow_id: str, status: TaskStatus) -> None:
         tasks = self.get_tasks(workflow_id)
@@ -466,7 +768,7 @@ async def _await_if_needed[T](value: Awaitable[T] | T) -> T:
     return value
 
 
-_workflow_service = WorkflowService()
+_workflow_service = WorkflowService(store=get_json_store())
 
 
 def get_workflow_service() -> WorkflowService:

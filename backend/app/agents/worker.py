@@ -63,6 +63,9 @@ class WorkerAgent:
             "worker_role": worker.role,
             "match_reason": match_reason,
             "status": TaskStatus.COMPLETED,
+            "revision_count": task.revision_count,
+            "revision_instructions": list(task.revision_instructions),
+            "estimated_cost": task.estimated_cost,
         }
 
         evidence: list[str] = [
@@ -79,6 +82,8 @@ class WorkerAgent:
             summary=summary,
             output=output,
             evidence=evidence,
+            cost=task.estimated_cost,
+            assignment_reason=match_reason,
         )
 
 

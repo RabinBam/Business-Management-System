@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+from threading import RLock
+
+from app.database import SQLiteJsonStore, get_json_store
 from app.schemas.report import FinancialSummary, Report, SalesPrediction
 from app.schemas.workflow import WorkflowRead
 from app.services.prediction_service import get_prediction_service
@@ -15,8 +18,15 @@ class ReportService:
     this service so they remain auditable.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, *, store: SQLiteJsonStore | None = None) -> None:
         self._reports: dict[str, Report] = {}
+        self._store = store
+        self._lock = RLock()
+        if store is not None:
+            self._reports = {
+                workflow_id: Report.model_validate(payload)
+                for workflow_id, payload in store.list("reports")
+            }
 
     # ------------------------------------------------------------------
     # Public API
@@ -54,12 +64,43 @@ class ReportService:
             risks=risks,
             recommendations=recommendations,
         )
-        self._reports[workflow.id] = report
-        return report
+        with self._lock:
+            self._reports[workflow.id] = report
+            if self._store is not None:
+                self._store.put(
+                    "reports",
+                    workflow.id,
+                    report.model_dump(mode="json"),
+                )
+        return report.model_copy(deep=True)
 
     def get_report(self, workflow_id: str) -> Report | None:
         """Return a previously generated report, or ``None``."""
-        return self._reports.get(workflow_id)
+        with self._lock:
+            report = self._reports.get(workflow_id)
+            return report.model_copy(deep=True) if report is not None else None
+
+    def list_reports(self) -> list[Report]:
+        with self._lock:
+            return [report.model_copy(deep=True) for report in self._reports.values()]
+
+    def delete_report(self, workflow_id: str) -> None:
+        with self._lock:
+            self._reports.pop(workflow_id, None)
+            if self._store is not None:
+                self._store.delete("reports", workflow_id)
+
+    def prune_orphans(self, valid_workflow_ids: set[str]) -> None:
+        with self._lock:
+            orphans = set(self._reports) - valid_workflow_ids
+        for workflow_id in orphans:
+            self.delete_report(workflow_id)
+
+    def clear(self) -> None:
+        with self._lock:
+            self._reports.clear()
+            if self._store is not None:
+                self._store.clear_namespace("reports")
 
     # ------------------------------------------------------------------
     # Internal helpers
@@ -169,5 +210,5 @@ _report_service: ReportService | None = None
 def get_report_service() -> ReportService:
     global _report_service
     if _report_service is None:
-        _report_service = ReportService()
+        _report_service = ReportService(store=get_json_store())
     return _report_service

@@ -118,6 +118,12 @@ class TaskRead(GeneratedTask):
     id: str
     workflow_id: str
     status: TaskStatus = TaskStatus.PENDING
+    estimated_cost: float = Field(default=0, ge=0)
+    assigned_worker_id: str | None = None
+    assigned_worker_name: str | None = None
+    assignment_reason: str | None = None
+    revision_count: int = Field(default=0, ge=0)
+    revision_instructions: list[str] = Field(default_factory=list)
 
 
 class ManagementReview(BaseModel):

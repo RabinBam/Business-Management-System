@@ -34,13 +34,20 @@ async def _execute_workers(tasks: list[TaskRead]) -> list[WorkerResult]:
 async def _generate_report_adapter(
     workflow: WorkflowRead,
     _tasks: list[TaskRead],
-    _results: list[WorkerResult],
+    results: list[WorkerResult],
     _reviews: list[ManagementReview],
 ) -> Report:
-    return await generate_report_for_workflow(workflow)
+    return await generate_report_for_workflow(
+        workflow,
+        task_spend=sum(result.cost for result in results),
+    )
 
 
-async def generate_report_for_workflow(workflow: WorkflowRead) -> Report:
+async def generate_report_for_workflow(
+    workflow: WorkflowRead,
+    *,
+    task_spend: float = 0,
+) -> Report:
     """Run report generation through failure simulation and watcher recovery."""
 
     def operation() -> Report:
@@ -49,7 +56,7 @@ async def generate_report_for_workflow(workflow: WorkflowRead) -> Report:
                 if workflow.id not in _simulated_report_failures:
                     _simulated_report_failures.add(workflow.id)
                     raise RuntimeError("Simulated report generation failure")
-        return get_report_service().generate_report(workflow)
+        return get_report_service().generate_report(workflow, task_spend=task_spend)
 
     return await execute_with_watch(
         "report_agent",
@@ -105,6 +112,10 @@ def configure_workflow_integrations(
     """Attach the existing team services to the Person 1 workflow spine."""
 
     workflow_service = service or get_workflow_service()
+    valid_workflow_ids = {workflow.id for workflow in workflow_service.list()}
+    get_report_service().prune_orphans(valid_workflow_ids)
+    marketing_service.prune_orphans(valid_workflow_ids)
+    watcher_service.prune_orphans(valid_workflow_ids)
     workflow_service.configure_collaborators(
         WorkflowCollaborators(
             execute_workers=_execute_workers,
@@ -114,3 +125,11 @@ def configure_workflow_integrations(
         )
     )
     return workflow_service
+
+
+def delete_workflow_artifacts(workflow_id: str) -> None:
+    """Remove cross-service records after the workflow aggregate is deleted."""
+
+    get_report_service().delete_report(workflow_id)
+    marketing_service.delete_plan(workflow_id)
+    watcher_service.delete_workflow_events(workflow_id)

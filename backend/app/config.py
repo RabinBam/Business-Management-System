@@ -39,7 +39,28 @@ class Settings:
     ai_max_tasks: int = _as_positive_int(
         os.getenv("AI_MAX_TASKS", "8"), default=8
     )
+    management_max_revisions: int = _as_positive_int(
+        os.getenv("MANAGEMENT_MAX_REVISIONS", "2"), default=2
+    )
     database_url: str = os.getenv("DATABASE_URL", "sqlite:///./aegisflow.db")
+    rate_limit_requests: int = _as_positive_int(
+        os.getenv("RATE_LIMIT_REQUESTS", "120"), default=120
+    )
+    rate_limit_window_seconds: int = _as_positive_int(
+        os.getenv("RATE_LIMIT_WINDOW_SECONDS", "60"), default=60
+    )
+    max_request_bytes: int = _as_positive_int(
+        os.getenv("MAX_REQUEST_BYTES", "1000000"), default=1_000_000
+    )
+    admin_api_key: str = os.getenv("ADMIN_API_KEY", "")
+    trusted_hosts: tuple[str, ...] = tuple(
+        host.strip()
+        for host in os.getenv(
+            "TRUSTED_HOSTS",
+            "localhost,127.0.0.1,backend,testserver",
+        ).split(",")
+        if host.strip()
+    )
     simulate_report_failure: bool = _as_bool(
         os.getenv("SIMULATE_REPORT_FAILURE", "false")
     )

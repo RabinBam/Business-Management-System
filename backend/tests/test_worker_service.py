@@ -52,6 +52,16 @@ class TestWorkerMatching:
         assert worker.role == "developer"
         assert "Matched role" in reason
 
+    def test_normalizes_human_readable_roles(self) -> None:
+        service = WorkerService()
+        task = _make_task(
+            required_role="Project Manager",
+            required_skills=["Risk Management"],
+        )
+        worker, reason = service.match_worker(task)
+        assert worker.role == "project_manager"
+        assert "Matched role" in reason
+
     def test_respects_experience_requirement(self) -> None:
         service = WorkerService()
         task = _make_task(required_role="developer", minimum_experience_years=5.0)

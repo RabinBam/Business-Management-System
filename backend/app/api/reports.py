@@ -37,7 +37,11 @@ async def get_report(workflow_id: str) -> ApiResponse[Report]:
             },
         )
 
-    report = report_service.generate_report(workflow)
+    results = workflow_service.get_worker_results(workflow_id) or []
+    report = report_service.generate_report(
+        workflow,
+        task_spend=sum(result.cost for result in results),
+    )
     return ApiResponse(data=report, message="Report generated")
 
 
@@ -52,5 +56,9 @@ async def generate_report(workflow_id: str) -> ApiResponse[Report]:
                 "message": f"Workflow '{workflow_id}' was not found.",
             },
         )
-    report = await generate_report_for_workflow(workflow)
+    results = get_workflow_service().get_worker_results(workflow_id) or []
+    report = await generate_report_for_workflow(
+        workflow,
+        task_spend=sum(result.cost for result in results),
+    )
     return ApiResponse(data=report, message="Report generated")
