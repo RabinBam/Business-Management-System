@@ -1,3 +1,36 @@
+<<<<<<< HEAD
+from datetime import UTC, date, datetime
+from enum import StrEnum
+
+from pydantic import BaseModel, Field
+
+
+class WorkflowStatus(StrEnum):
+    CREATED = "CREATED"
+    SEGMENTING = "SEGMENTING"
+    ASSIGNING = "ASSIGNING"
+    EXECUTING = "EXECUTING"
+    REVIEWING = "REVIEWING"
+    REPORTING = "REPORTING"
+    MARKETING = "MARKETING"
+    FINAL_REVIEW = "FINAL_REVIEW"
+    COMPLETED = "COMPLETED"
+    FAILED = "FAILED"
+
+
+class WorkflowCreate(BaseModel):
+    title: str = Field(min_length=3, max_length=120)
+    objective: str = Field(min_length=10, max_length=2_000)
+    budget: float = Field(ge=0)
+    deadline: date
+
+
+class WorkflowRead(WorkflowCreate):
+    id: str
+    status: WorkflowStatus = WorkflowStatus.CREATED
+    current_stage: str = "created"
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+=======
 from datetime import UTC, date, datetime
 from enum import StrEnum
 
@@ -55,3 +88,4 @@ class WorkflowRead(WorkflowCreate):
     completed_at: datetime | None = None
     failure: WorkflowFailure | None = None
     executive_summary: ExecutiveSummary | None = None
+>>>>>>> 3ffc1b091eeeb5d0c2ea50affbb8c90e7a14e16e

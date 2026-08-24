@@ -1,3 +1,10 @@
+<<<<<<< HEAD
+"""Person 1 starting point: executive objective decomposition."""
+
+SYSTEM_PROMPT = """You decompose an executive objective into concrete, verifiable tasks.
+Plan the work; do not perform it. Return only data that matches the supplied schema."""
+
+=======
 import json
 from collections.abc import Callable
 from datetime import date
@@ -140,3 +147,4 @@ async def segment_objective(
         budget=budget,
         deadline=deadline,
     )
+>>>>>>> 3ffc1b091eeeb5d0c2ea50affbb8c90e7a14e16e
