@@ -5,7 +5,14 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from app.schemas.common import ApiResponse
 from app.schemas.task import TaskRead
 from app.schemas.workflow import WorkflowCreate, WorkflowRead
-from app.services.workflow_service import WorkflowService, get_workflow_service
+from app.services.workflow_service import (
+    WorkflowConflictError,
+    WorkflowExecutionError,
+    WorkflowNotFoundError,
+    WorkflowService,
+    WorkflowValidationError,
+    get_workflow_service,
+)
 
 router = APIRouter(prefix="/workflows", tags=["workflows"])
 Service = Annotated[WorkflowService, Depends(get_workflow_service)]
@@ -21,9 +28,28 @@ def _not_found(workflow_id: str) -> HTTPException:
     )
 
 
+def _workflow_error(
+    *,
+    status_code: int,
+    code: str,
+    message: str,
+) -> HTTPException:
+    return HTTPException(
+        status_code=status_code,
+        detail={"code": code, "message": message},
+    )
+
+
 @router.post("", response_model=ApiResponse[WorkflowRead], status_code=201)
 async def create_workflow(payload: WorkflowCreate, service: Service) -> ApiResponse[WorkflowRead]:
-    workflow = service.create(payload)
+    try:
+        workflow = service.create(payload)
+    except WorkflowValidationError as exc:
+        raise _workflow_error(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            code="WORKFLOW_INVALID",
+            message=str(exc),
+        ) from exc
     return ApiResponse(data=workflow, message="Workflow created")
 
 
@@ -37,10 +63,31 @@ async def get_workflow(workflow_id: str, service: Service) -> ApiResponse[Workfl
 
 @router.post("/{workflow_id}/run", response_model=ApiResponse[WorkflowRead])
 async def run_workflow(workflow_id: str, service: Service) -> ApiResponse[WorkflowRead]:
-    workflow = service.run(workflow_id)
-    if workflow is None:
+    if service.get(workflow_id) is None:
         raise _not_found(workflow_id)
-    return ApiResponse(data=workflow, message="Workflow started")
+    try:
+        workflow = await service.run_workflow(workflow_id)
+    except WorkflowNotFoundError as exc:
+        raise _not_found(workflow_id) from exc
+    except WorkflowConflictError as exc:
+        raise _workflow_error(
+            status_code=status.HTTP_409_CONFLICT,
+            code="WORKFLOW_CONFLICT",
+            message=str(exc),
+        ) from exc
+    except WorkflowValidationError as exc:
+        raise _workflow_error(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            code="WORKFLOW_INVALID",
+            message=str(exc),
+        ) from exc
+    except WorkflowExecutionError as exc:
+        raise _workflow_error(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            code="WORKFLOW_EXECUTION_FAILED",
+            message=str(exc),
+        ) from exc
+    return ApiResponse(data=workflow, message="Workflow advanced")
 
 
 @router.get("/{workflow_id}/tasks", response_model=ApiResponse[list[TaskRead]])
@@ -49,4 +96,3 @@ async def get_tasks(workflow_id: str, service: Service) -> ApiResponse[list[Task
     if tasks is None:
         raise _not_found(workflow_id)
     return ApiResponse(data=tasks, message="Tasks loaded")
-

@@ -1,0 +1,15 @@
+{
+  "version": "1.0",
+  "description": "Quarterly sales figures for prediction pipeline",
+  "currency": "USD",
+  "quarters": [
+    { "period": "2024-Q1", "revenue": 110000, "units_sold": 420, "new_customers": 32 },
+    { "period": "2024-Q2", "revenue": 115000, "units_sold": 440, "new_customers": 35 },
+    { "period": "2024-Q3", "revenue": 108000, "units_sold": 410, "new_customers": 30 },
+    { "period": "2024-Q4", "revenue": 130000, "units_sold": 500, "new_customers": 45 },
+    { "period": "2025-Q1", "revenue": 135000, "units_sold": 520, "new_customers": 48 },
+    { "period": "2025-Q2", "revenue": 145000, "units_sold": 560, "new_customers": 55 },
+    { "period": "2025-Q3", "revenue": 138000, "units_sold": 530, "new_customers": 50 },
+    { "period": "2025-Q4", "revenue": 170000, "units_sold": 650, "new_customers": 70 }
+  ]
+}
