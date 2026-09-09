@@ -474,6 +474,41 @@ class WorkflowService:
         self._persist_workflow(workflow.id)
         return self.transition(workflow.id, WorkflowStatus.REPORTING)
 
+    async def demo_complete_tasks(self, workflow_id: str) -> WorkflowRead:
+        """Simulate task completion and approval for a local presentation."""
+        async with self._get_run_lock(workflow_id):
+            workflow = self._require_stored(workflow_id)
+            if workflow.status != WorkflowStatus.EXECUTING:
+                raise WorkflowConflictError("Prepare the task plan first; it must be awaiting work.")
+            tasks = self.get_tasks(workflow_id) or []
+            if not tasks:
+                raise WorkflowConflictError("No prepared tasks to complete.")
+            artifacts = self._artifacts[workflow_id]
+            results = {r.task_id: r for r in artifacts.worker_results}
+            for task in tasks:
+                if task.id not in results:
+                    results[task.id] = WorkerResult(
+                        task_id=task.id, worker_id=task.assigned_worker_id or "demo",
+                        summary="DEMO ONLY: simulated completion; no real work performed.",
+                        output={"source": "demo", "assigned_worker": task.assigned_worker_name,
+                                "deliverable": "DEMO ONLY: simulated completion of " + task.title},
+                        evidence=["Demo button; not verified evidence"], cost=task.estimated_cost,
+                        assignment_reason=task.assignment_reason or "Demo",
+                    )
+            artifacts.worker_results = list(results.values())
+            artifacts.reviews = [ManagementReview(
+                task_id=t.id, decision=ManagementDecision.APPROVED,
+                feedback="DEMO ONLY: review bypassed for presentation.",
+            ) for t in tasks]
+            self.replace_tasks(workflow_id, [
+                t.model_copy(update={"status": TaskStatus.COMPLETED}) for t in tasks
+            ])
+            self.transition(workflow_id, WorkflowStatus.REVIEWING)
+            self._persist_workflow(workflow_id)
+            self._record_event(workflow_id, "demo", "DEMO_COMPLETED",
+                               "Task completion and review simulated for presentation.", 0)
+            return self.transition(workflow_id, WorkflowStatus.REPORTING)
+
     async def submit_employee_work(
         self,
         workflow_id: str,

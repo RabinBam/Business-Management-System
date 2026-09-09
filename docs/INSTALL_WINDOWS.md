@@ -143,3 +143,14 @@ six automatic worker-writing calls. Mock mode is explicitly simulated offline AI
 
 For native Python/Node development, see the root README. For a shared public
 deployment, add organizational authentication and HTTPS before exposing the app.
+
+## Presentation reset and quick completion
+
+AI Workforce has **Quick complete tasks (demo)**. Prepare a workflow first; the
+button marks its tasks complete and bypasses review, clearly labeling all simulated
+results. Continue the workflow to generate reports, marketing and the CEO summary.
+
+Each Start-Byapari launch recreates the app and resets saved work and money.
+Employees and API keys are preserved. The database is backed up before reset in
+the Docker data volume as byapari-before-launch-*.db. Browser refresh does not reset
+data. To retain work across launches, set RESET_DEMO_ON_START=false in .env.

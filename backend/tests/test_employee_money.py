@@ -163,3 +163,33 @@ def test_marketing_decimal_budget_boundary():
         ],
     )
     assert plan.validate_budget() == 0.3
+
+
+def test_demo_completion(client):
+    w = client.post("/api/v1/workflows", json=payload()).json()["data"]
+    client.post(f"/api/v1/workflows/{w['id']}/refine")
+    result = client.post("/api/v1/employees/demo/quick-complete")
+    assert result.status_code == 200
+    assert result.json()["data"][0]["status"] == "REPORTING"
+    tasks = client.get(f"/api/v1/workflows/{w['id']}/tasks").json()["data"]
+    assert all(t["status"] == "COMPLETED" for t in tasks)
+    assert client.post("/api/v1/employees/demo/quick-complete").json()["data"] == []
+
+
+def test_demo_reset_backups_and_preserves_other_data(tmp_path):
+    import sqlite3
+
+    from app.demo_start import reset_demo
+    path = tmp_path / "demo.db"
+    store = SQLiteJsonStore("sqlite:///" + str(path))
+    store.put("workflows", "demo", {"title": "demo"})
+    store.put("money", "entry", {"amount": "12"})
+    store.put("employees", "employee", {"name": "kept"})
+    reset_demo(path)
+    assert store.get("workflows", "demo") is None
+    assert store.get("money", "entry") is None
+    assert store.get("employees", "employee") == {"name": "kept"}
+    backups = list(tmp_path.glob("byapari-before-launch-*.db"))
+    assert len(backups) == 1
+    with sqlite3.connect(backups[0]) as connection:
+        assert connection.execute("SELECT count(*) FROM json_records").fetchone()[0] == 3

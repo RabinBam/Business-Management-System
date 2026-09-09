@@ -55,3 +55,16 @@ async def submit(worker_id: str, workflow_id: str, task_id: str, payload: Submis
     except (WorkflowConflictError, WorkflowValidationError) as exc:
         raise HTTPException(409, str(exc)) from exc
     return ApiResponse(data=result, message="Work submitted for review")
+
+
+@router.post("/demo/quick-complete")
+async def demo_quick_complete():
+    service = get_workflow_service()
+    completed = []
+    for workflow in service.list():
+        if workflow.status == "EXECUTING":
+            try:
+                completed.append(await service.demo_complete_tasks(workflow.id))
+            except WorkflowConflictError:
+                continue
+    return ApiResponse(data=completed, message="Demo tasks completed; review was simulated")

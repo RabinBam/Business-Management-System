@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { getWorkers } from "@/lib/api";
+import { getWorkers, request } from "@/lib/api";
 import type { Worker } from "@/lib/types";
 import { EmptyState, ErrorState, LoadingSkeleton } from "./AsyncStates";
 import { ProgressBar } from "./charts/ProgressBar";
@@ -17,6 +17,17 @@ function initials(name: string) {
 }
 
 export function WorkersView() {
+  const [completing, setCompleting] = useState(false);
+  const [demoMessage, setDemoMessage] = useState("");
+  async function quickComplete() {
+    setCompleting(true);
+    try {
+      const done = await request<unknown[]>("/employees/demo/quick-complete", { method: "POST" });
+      setDemoMessage(done.length ? `Demo tasks completed for ${done.length} workflow(s). Review was simulated. Continue the workflow for reports and marketing.` : "No tasks awaiting work. Create a workflow and prepare its tasks first.");
+      await load();
+    } catch (reason) { setDemoMessage(reason instanceof Error ? reason.message : "Demo completion failed."); }
+    finally { setCompleting(false); }
+  }
   const [workers, setWorkers] = useState<Worker[]>([]);
   const [filter, setFilter] = useState("All");
   const [query, setQuery] = useState("");
@@ -71,6 +82,11 @@ export function WorkersView() {
         </div>
         <Link className="primaryButton" href="/employees">Open employee workspace →</Link>
       </header>
+      <section className="panel" style={{ padding: 20, marginBottom: 20 }}>
+        <button className="primaryButton" disabled={completing} onClick={() => void quickComplete()}>{completing ? "Completing…" : "Quick complete tasks (demo)"}</button>
+        <p>Simulates completion and approval of all prepared tasks. No real employee work or AI review is performed. Saved work resets when the app is launched with Start-Byapari.</p>
+        {demoMessage && <p role="status">{demoMessage}</p>}
+      </section>
       <section className="workerToolbar">
         <div>
           {filters.map((item) => (

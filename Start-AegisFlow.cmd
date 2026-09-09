@@ -17,7 +17,7 @@ if errorlevel 1 (
   pause
   exit /b 1
 )
-docker compose -f docker-compose.yml up -d --build --wait --wait-timeout 180
+docker compose -f docker-compose.yml up -d --build --force-recreate --wait --wait-timeout 180
 if errorlevel 1 (
   echo Startup failed. See the error above and docs\INSTALL_WINDOWS.md.
   pause
