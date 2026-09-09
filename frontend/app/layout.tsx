@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 
 import "./globals.css";
 import "./prototype.css";
+import "./byapari.css";
 
 export const metadata: Metadata = {
   title: "Byapari",

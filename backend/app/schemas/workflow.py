@@ -1,5 +1,6 @@
 from datetime import UTC, date, datetime
 from enum import StrEnum
+from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -23,8 +24,12 @@ class WorkflowCreate(BaseModel):
 
     title: str = Field(min_length=3, max_length=120)
     objective: str = Field(min_length=10, max_length=2_000)
-    budget: float = Field(ge=0)
+    budget: float = Field(ge=0, le=1_000_000_000_000, allow_inf_nan=False)
     deadline: date
+    execution_mode: Literal["ai", "employee"] = "ai"
+    sales_history: list[Annotated[float, Field(ge=0, allow_inf_nan=False)]] = Field(
+        default_factory=list, max_length=36,
+    )
 
 
 class WorkflowFailure(BaseModel):

@@ -15,7 +15,7 @@ from app.security import RequestGuardMiddleware
 def create_app() -> FastAPI:
     configure_workflow_integrations()
     application = FastAPI(
-        title="AegisFlow AI API",
+        title="Byapari API",
         version="1.0.0",
         description="Durable orchestration API for accountable business workflows.",
     )
@@ -39,9 +39,7 @@ def create_app() -> FastAPI:
         return {"status": "ok", "environment": settings.app_env}
 
     @application.exception_handler(RequestValidationError)
-    async def validation_error(
-        _request: Request, exc: RequestValidationError
-    ) -> JSONResponse:
+    async def validation_error(_request: Request, exc: RequestValidationError) -> JSONResponse:
         return JSONResponse(
             status_code=422,
             content={
@@ -49,7 +47,9 @@ def create_app() -> FastAPI:
                 "error": {
                     "code": "VALIDATION_ERROR",
                     "message": "The request did not match the API contract.",
-                    "details": exc.errors(),
+                    "details": [
+                        {"loc": e["loc"], "msg": e["msg"], "type": e["type"]} for e in exc.errors()
+                    ],
                 },
             },
         )

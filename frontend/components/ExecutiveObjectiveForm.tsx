@@ -7,19 +7,15 @@ import { formatDate, formatNpr } from "@/lib/formatters";
 import type { Workflow } from "@/lib/types";
 import { StatusBadge } from "./StatusBadge";
 
-function defaultDeadline() {
-  const date = new Date();
-  date.setDate(date.getDate() + 30);
-  return date.toISOString().slice(0, 10);
-}
-
 export function ExecutiveObjectiveForm({ onCreated }: { onCreated?: () => void }) {
   const router = useRouter();
   const [form, setForm] = useState({
     title: "",
     objective: "",
     budget: "",
-    deadline: defaultDeadline(),
+    deadline: "",
+    execution_mode: "employee",
+    sales_history: "",
   });
   const [workflow, setWorkflow] = useState<Workflow | null>(null);
   const [pending, setPending] = useState<"create" | "run" | null>(null);
@@ -33,12 +29,17 @@ export function ExecutiveObjectiveForm({ onCreated }: { onCreated?: () => void }
     setPending("create");
     setError("");
     try {
+      const months = form.sales_history.trim() ? form.sales_history.split(",").map(v => v.trim()) : [];
+      if (months.some(v => !v || !Number.isFinite(Number(v)) || Number(v) < 0)) {
+        throw new Error("Enter non-negative monthly revenue amounts separated by commas.");
+      }
       const created = await createWorkflow({
         ...form,
         budget: Number(form.budget),
+        execution_mode: form.execution_mode as "ai" | "employee",
+        sales_history: months.map(Number),
       });
       setWorkflow(created);
-      window.localStorage.setItem("byapari:lastWorkflowId", created.id);
       onCreated?.();
     } catch (reason) {
       setError(
@@ -122,6 +123,16 @@ export function ExecutiveObjectiveForm({ onCreated }: { onCreated?: () => void }
             />
           </label>
         </div>
+        <label>Who completes the tasks?
+          <select value={form.execution_mode} onChange={e => change("execution_mode", e.target.value)}>
+            <option value="employee">Employees submit work; AI reviews it</option>
+            <option value="ai">AI generates written deliverables</option>
+          </select>
+        </label>
+        <label>Monthly revenue history (optional)
+          <input value={form.sales_history} onChange={e => change("sales_history", e.target.value)} placeholder="Your consecutive monthly amounts, oldest first, separated by commas" />
+        </label>
+        <p>No forecast is shown without at least two monthly revenue values. The budget is a planning limit, not a payment.</p>
         {error && (
           <p className="inlineError" role="alert">
             {error}

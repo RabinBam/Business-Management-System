@@ -4,15 +4,23 @@ from datetime import date
 
 from app.schemas.task import GeneratedTask, GeneratedTaskList
 from app.services.ai_service import AIResponseError, AIService, get_ai_service
+from app.services.worker_service import get_worker_service
 
-SYSTEM_PROMPT = """You are the AegisFlow work decomposition agent.
+SYSTEM_PROMPT = """You are the Byapari work decomposition agent.
 Break one executive objective into a small set of concrete, verifiable tasks.
 Plan the work; do not perform it.
 
 For dependency_task_ids, task positions are canonical IDs: task-001, task-002,
 and so on. A task may depend only on an earlier task. Every task must state a
 role, minimum experience, required skills, expected output, and measurable
-acceptance criteria. Return only data matching the supplied schema."""
+acceptance criteria. If a workforce roster is supplied, use its exact roles and
+create one distinct useful task for every employee. Include finance, marketing,
+design, engineering, analytics and coordination work appropriate to the objective.
+employee_brief: explain WHY this work matters, HOW to begin, and what to submit,
+tailored to that employee's experience. Junior staff need concrete steps; experienced
+staff need decision boundaries. handoff_notes: explain inputs needed and what the
+next department receives. Keep each briefing under 90 words. No invented business
+facts, money spent, or finished actions. Return only the supplied schema."""
 
 ValidationFailureHandler = Callable[[Exception, int], None]
 
@@ -34,6 +42,7 @@ class Orchestrator:
         max_tasks: int = 8,
         validation_retries: int = 1,
         on_validation_failure: ValidationFailureHandler | None = None,
+        include_workforce: bool = False,
     ) -> None:
         if max_tasks < 1:
             raise ValueError("max_tasks must be positive")
@@ -44,6 +53,7 @@ class Orchestrator:
         self._max_tasks = max_tasks
         self._validation_retries = validation_retries
         self._on_validation_failure = on_validation_failure
+        self._include_workforce = include_workforce
 
     async def segment(
         self,
@@ -76,6 +86,12 @@ class Orchestrator:
         raise OrchestrationError("Unable to produce a valid task plan") from last_error
 
     def _validate_business_rules(self, plan: GeneratedTaskList) -> None:
+        if self._include_workforce:
+            required_roles = {w.role for w in get_worker_service().get_workers()}
+            if not required_roles <= {t.required_role for t in plan.tasks}:
+                raise OrchestrationValidationError(
+                    "Assign a distinct task to every exact roster role."
+                )
         if len(plan.tasks) > self._max_tasks:
             raise OrchestrationValidationError(
                 f"Plan contains {len(plan.tasks)} tasks; maximum is {self._max_tasks}"
@@ -96,6 +112,8 @@ class Orchestrator:
             "deadline": deadline.isoformat(),
             "maximum_tasks": self._max_tasks,
         }
+        if self._include_workforce:
+            payload["workforce"] = [w.model_dump() for w in get_worker_service().get_workers()]
         return "EXECUTIVE_OBJECTIVE:\n" + json.dumps(payload, ensure_ascii=False)
 
     @staticmethod

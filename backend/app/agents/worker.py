@@ -2,18 +2,27 @@
 
 from __future__ import annotations
 
+from pydantic import BaseModel, Field
+
+from app.config import settings
 from app.schemas.task import TaskRead, TaskStatus
 from app.schemas.worker import WorkerProfile, WorkerResult
+from app.services.ai_service import AIService, MockAIProvider, get_ai_service
 from app.services.worker_service import get_worker_service
+
+
+class TaskDeliverable(BaseModel):
+    summary: str = Field(min_length=1)
+    deliverable: str = Field(min_length=1)
+    evidence: list[str]
+    limitations: list[str]
 
 
 class WorkerAgent:
     """Execute a task by matching it to the best available worker profile.
 
-    The agent itself does not perform real work — it simulates deterministic
-    execution based on the worker's profile and the task requirements.  When a
-    real AI provider is wired up (Person 1), the ``execute`` method can
-    delegate to the provider while keeping the matching logic deterministic.
+    Mock mode simulates execution. Configured providers produce written
+    deliverables while matching and estimated costs remain deterministic.
     """
 
     def __init__(self) -> None:
@@ -36,6 +45,58 @@ class WorkerAgent:
     ) -> list[WorkerResult]:
         """Execute every task in order and return the collected results."""
         return [self.assign_and_execute(t) for t in tasks]
+
+    async def execute_all(
+        self, tasks: list[TaskRead], *, ai_service: AIService | None = None,
+    ) -> list[WorkerResult]:
+        provider = ai_service or get_ai_service()
+        if isinstance(provider, MockAIProvider):
+            return self.assign_and_execute_all(tasks)
+        results: list[WorkerResult] = []
+        pending = list(tasks)
+        completed_ids: set[str] = set()
+        while pending:
+            task = next((item for item in pending
+                         if set(item.dependency_task_ids) <= completed_ids), None)
+            if task is None:
+                raise ValueError("Worker tasks contain missing or cyclic dependencies")
+            pending.remove(task)
+            worker, reason = self._service.match_worker(task)
+            deliverable = await provider.generate_structured(
+                system_prompt=(
+                    "You are an Byapari business worker. Produce the actual written "
+                    "deliverable requested by the task, satisfying its acceptance criteria "
+                    "and revision instructions. Use earlier results where relevant. "
+                    "You cannot perform external actions. Do not claim to have launched "
+                    "campaigns, contacted people, or verified external facts. Clearly state "
+                    "assumptions and limitations; evidence must refer to supplied inputs "
+                    "or content in your deliverable."
+                ),
+                user_prompt=(
+                    "TASK_JSON:\n" + task.model_dump_json()
+                    + "\nWORKER_JSON:\n" + worker.model_dump_json()
+                    + "\nEARLIER_RESULTS:\n"
+                    + "\n".join(result.model_dump_json() for result in results)
+                ),
+                schema=TaskDeliverable,
+                model=settings.ai_worker_model or None,
+            )
+            results.append(WorkerResult(
+                task_id=task.id,
+                worker_id=worker.id,
+                summary=deliverable.summary,
+                output={
+                    "assigned_worker": worker.name,
+                    "deliverable": deliverable.deliverable,
+                    "limitations": deliverable.limitations,
+                    "revision_count": task.revision_count,
+                },
+                evidence=deliverable.evidence,
+                cost=task.estimated_cost,
+                assignment_reason=reason,
+            ))
+            completed_ids.add(task.id)
+        return results
 
     # ------------------------------------------------------------------
     # Internal helpers

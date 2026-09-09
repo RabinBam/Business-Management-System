@@ -27,18 +27,21 @@ export function AppShell({
   const links = [
     ["Command Center", "/", "▦"],
     ["AI Workforce", "/workers", "♙"],
-    ["Workflow", `/workflows/${encodedId ?? "demo"}`, "⌘"],
-    ["Reports", `/reports/${encodedId ?? "demo"}`, "▥"],
-    ["Marketing", `/marketing/${encodedId ?? "demo"}`, "⌁"],
+    ["Employee workspace", "/employees", "♙"],
+    ["Money", "/money", "▥"],
+    ["Tasks & teams", "/tasks", "⌘"],
+    ["Workflow", encodedId ? `/workflows/${encodedId}` : "/workflows", "⌘"],
+    ["Reports", encodedId ? `/reports/${encodedId}` : "/reports", "▥"],
+    ["Marketing", encodedId ? `/marketing/${encodedId}` : "/marketing", "⌁"],
     [
       "Watcher",
-      encodedId ? `/watcher?workflow=${encodedId}` : "/watcher?demo=1",
+      encodedId ? `/watcher?workflow=${encodedId}` : "/watcher",
       "⌁",
     ],
-    ["Executive Summary", `/executive-summary/${encodedId ?? "demo"}`, "⌁"],
+    ["Executive Summary", encodedId ? `/executive-summary/${encodedId}` : "/executive-summary", "⌁"],
   ];
   const activeFor = (label: string) =>
-    label === "Command Center"
+    label === "Tasks & teams" ? pathname.startsWith("/tasks") : label === "Employee workspace" ? pathname.startsWith("/employees") : label === "Money" ? pathname.startsWith("/money") : label === "Command Center"
       ? pathname === "/"
       : label === "AI Workforce"
         ? pathname.startsWith("/workers")
@@ -89,7 +92,7 @@ export function AppShell({
       </aside>
       <div className="appBody">
         <header className="topbarNew">
-          <strong>Kathmandu Digital Pvt. Ltd.</strong>
+          <strong>Byapari workspace</strong>
           <span className={demoMode ? "demoMode" : ""}>
             <i />
             {demoMode ? "Prototype Mode" : "Workspace"}

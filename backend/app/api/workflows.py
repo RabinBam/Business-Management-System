@@ -83,9 +83,7 @@ async def get_workflow_status(
 
 
 @router.post("/{workflow_id}/refine", response_model=ApiResponse[WorkflowRead])
-async def refine_workflow(
-    workflow_id: str, service: Service
-) -> ApiResponse[WorkflowRead]:
+async def refine_workflow(workflow_id: str, service: Service) -> ApiResponse[WorkflowRead]:
     if service.get(workflow_id) is None:
         raise _not_found(workflow_id)
     try:
@@ -96,13 +94,13 @@ async def refine_workflow(
             code="WORKFLOW_CONFLICT",
             message=str(exc),
         ) from exc
+    except WorkflowExecutionError as exc:
+        raise _workflow_error(status_code=502, code="PLANNING_FAILED", message=str(exc)) from exc
     return ApiResponse(data=workflow, message="Workflow tasks refined")
 
 
 @router.post("/{workflow_id}/retry", response_model=ApiResponse[WorkflowRead])
-async def retry_workflow(
-    workflow_id: str, service: Service
-) -> ApiResponse[WorkflowRead]:
+async def retry_workflow(workflow_id: str, service: Service) -> ApiResponse[WorkflowRead]:
     if service.get(workflow_id) is None:
         raise _not_found(workflow_id)
     try:
@@ -117,9 +115,7 @@ async def retry_workflow(
 
 
 @router.post("/{workflow_id}/cancel", response_model=ApiResponse[WorkflowRead])
-async def cancel_workflow(
-    workflow_id: str, service: Service
-) -> ApiResponse[WorkflowRead]:
+async def cancel_workflow(workflow_id: str, service: Service) -> ApiResponse[WorkflowRead]:
     if service.get(workflow_id) is None:
         raise _not_found(workflow_id)
     try:
@@ -183,9 +179,7 @@ async def get_tasks(workflow_id: str, service: Service) -> ApiResponse[list[Task
 
 
 @router.get("/{workflow_id}/results", response_model=ApiResponse[list[WorkerResult]])
-async def get_results(
-    workflow_id: str, service: Service
-) -> ApiResponse[list[WorkerResult]]:
+async def get_results(workflow_id: str, service: Service) -> ApiResponse[list[WorkerResult]]:
     results = service.get_worker_results(workflow_id)
     if results is None:
         raise _not_found(workflow_id)
@@ -193,9 +187,7 @@ async def get_results(
 
 
 @router.get("/{workflow_id}/reviews", response_model=ApiResponse[list[ManagementReview]])
-async def get_reviews(
-    workflow_id: str, service: Service
-) -> ApiResponse[list[ManagementReview]]:
+async def get_reviews(workflow_id: str, service: Service) -> ApiResponse[list[ManagementReview]]:
     reviews = service.get_reviews(workflow_id)
     if reviews is None:
         raise _not_found(workflow_id)

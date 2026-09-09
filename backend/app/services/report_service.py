@@ -7,7 +7,7 @@ from threading import RLock
 from app.database import SQLiteJsonStore, get_json_store
 from app.schemas.report import FinancialSummary, Report, SalesPrediction
 from app.schemas.workflow import WorkflowRead
-from app.services.prediction_service import get_prediction_service
+from app.services.prediction_service import PredictionService
 
 
 class ReportService:
@@ -52,7 +52,7 @@ class ReportService:
             planned_spend=task_spend,
         )
 
-        prediction = self._build_sales_prediction()
+        prediction = self._build_sales_prediction(workflow.sales_history)
 
         risks = self._assess_risks(financial, prediction)
         recommendations = self._build_recommendations(financial, prediction)
@@ -119,9 +119,23 @@ class ReportService:
         )
 
     @staticmethod
-    def _build_sales_prediction() -> SalesPrediction:
-        prediction_service = get_prediction_service()
-        return prediction_service.predict_next_quarter()
+    def _build_sales_prediction(history: list[float]) -> SalesPrediction:
+        if len(history) < 2:
+            return SalesPrediction(
+                current_sales=history[-1] if history else 0,
+                predicted_sales=0,
+                growth_percent=0,
+                method="unavailable",
+            )
+        slope, intercept = PredictionService._linear_regression(history)
+        predicted = max(0, slope * len(history) + intercept)
+        latest = history[-1]
+        return SalesPrediction(
+            current_sales=latest,
+            predicted_sales=round(predicted, 2),
+            growth_percent=round((predicted - latest) / latest * 100, 2) if latest else 0,
+            method="user_monthly_history",
+        )
 
     @staticmethod
     def _assess_risks(
@@ -132,19 +146,16 @@ class ReportService:
 
         if financial.remaining_budget < 0:
             risks.append(
-                "Planned spend exceeds total budget by "
-                f"${abs(financial.remaining_budget):,.2f}."
+                f"Planned spend exceeds total budget by ${abs(financial.remaining_budget):,.2f}."
             )
         elif financial.remaining_budget < financial.total_budget * 0.10:
-            risks.append(
-                "Less than 10% of budget remains — limited room for "
-                "unplanned expenses."
-            )
+            risks.append("Less than 10% of budget remains — limited room for unplanned expenses.")
 
-        if prediction.growth_percent < 0:
+        if prediction.method == "unavailable":
+            risks.append("Sales forecast unavailable: provide at least two monthly revenue values.")
+        elif prediction.growth_percent < 0:
             risks.append(
-                f"Sales are projected to decline by "
-                f"{abs(prediction.growth_percent):.1f}%."
+                f"Sales are projected to decline by {abs(prediction.growth_percent):.1f}%."
             )
         elif prediction.growth_percent < 5:
             risks.append(
@@ -177,19 +188,19 @@ class ReportService:
             )
         elif utilisation > 90:
             recommendations.append(
-                "Budget is nearly exhausted — prioritise remaining tasks by "
-                "expected ROI."
+                "Budget is nearly exhausted — prioritise remaining tasks by expected ROI."
             )
 
-        if prediction.growth_percent >= 10:
+        if prediction.method == "unavailable":
+            recommendations.append("No sales prediction was made; no sample sales data is used.")
+        elif prediction.growth_percent >= 10:
             recommendations.append(
                 "Strong growth trend detected — allocate additional marketing "
                 "budget to capitalise on momentum."
             )
         elif prediction.growth_percent >= 0:
             recommendations.append(
-                "Moderate growth expected — maintain current marketing spend "
-                "and monitor closely."
+                "Moderate growth expected — maintain current marketing spend and monitor closely."
             )
         else:
             recommendations.append(

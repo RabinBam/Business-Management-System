@@ -8,6 +8,7 @@ export function TaskCard({ task, assignee, progress }: { task: Task; assignee?: 
       <div className="taskMeta"><span>{task.priority} priority</span><span>{task.status}</span></div>
       <h3>{task.title}</h3>
       <p>{task.description}</p>
+      {task.employee_brief && <details><summary>Employee briefing & team notes</summary><p>{task.employee_brief}</p><p>{task.handoff_notes}</p></details>}
       <div className="skillList">{task.required_skills.map((skill) => <span key={skill}>{skill}</span>)}</div>
       <dl>
         <div><dt>Role</dt><dd>{task.required_role}</dd></div>

@@ -5,6 +5,7 @@ import inspect
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from datetime import UTC, date, datetime
+from decimal import ROUND_DOWN, Decimal
 from threading import RLock
 from uuid import uuid4
 
@@ -23,7 +24,8 @@ from app.schemas.workflow import (
     WorkflowRead,
     WorkflowStatus,
 )
-from app.services.ai_service import AIService, get_ai_service
+from app.services.ai_service import AIService, MockAIProvider, get_ai_service
+from app.services.worker_service import get_worker_service
 
 STAGE_NAMES: dict[WorkflowStatus, str] = {
     WorkflowStatus.CREATED: "created",
@@ -86,16 +88,12 @@ ALLOWED_TRANSITIONS: dict[WorkflowStatus, set[WorkflowStatus]] = {
     WorkflowStatus.CANCELLED: set(),
 }
 
-WorkerExecutor = Callable[
-    [list[TaskRead]], Awaitable[list[WorkerResult]] | list[WorkerResult]
-]
+WorkerExecutor = Callable[[list[TaskRead]], Awaitable[list[WorkerResult]] | list[WorkerResult]]
 ReportGenerator = Callable[
     [WorkflowRead, list[TaskRead], list[WorkerResult], list[ManagementReview]],
     Awaitable[Report] | Report,
 ]
-MarketingGenerator = Callable[
-    [WorkflowRead, Report], Awaitable[MarketingPlan] | MarketingPlan
-]
+MarketingGenerator = Callable[[WorkflowRead, Report], Awaitable[MarketingPlan] | MarketingPlan]
 EventRecorder = Callable[[str, str, str, str, int], None]
 
 
@@ -184,10 +182,7 @@ class WorkflowService:
 
     def list(self) -> list[WorkflowRead]:
         with self._lock:
-            workflows = [
-                workflow.model_copy(deep=True)
-                for workflow in self._workflows.values()
-            ]
+            workflows = [workflow.model_copy(deep=True) for workflow in self._workflows.values()]
         return sorted(workflows, key=lambda item: item.created_at, reverse=True)
 
     def get(self, workflow_id: str) -> WorkflowRead | None:
@@ -281,12 +276,14 @@ class WorkflowService:
         async with run_lock:
             workflow = self.require(workflow_id)
             if workflow.status is WorkflowStatus.CREATED:
-                return await self._plan_and_refine(workflow)
+                try:
+                    return await self._plan_and_refine(workflow)
+                except Exception as exc:
+                    failed = self.fail(workflow_id, code="PLANNING_FAILED", message=str(exc))
+                    raise WorkflowExecutionError(failed) from exc
             if workflow.status is WorkflowStatus.EXECUTING:
                 return workflow
-            raise WorkflowConflictError(
-                f"Workflow cannot be refined from {workflow.status}"
-            )
+            raise WorkflowConflictError(f"Workflow cannot be refined from {workflow.status}")
 
     async def _run_workflow_locked(self, workflow_id: str) -> WorkflowRead:
         workflow = self.require(workflow_id)
@@ -345,20 +342,33 @@ class WorkflowService:
 
         self.transition(workflow.id, WorkflowStatus.ASSIGNING)
         tasks: list[TaskRead] = []
-        total_weight = sum(max(task.difficulty, 1) for task in generated)
-        execution_budget = workflow.budget * 0.6
-        for index, task in enumerate(generated, start=1):
-            refined = await manager.refine_task(task)
-            estimated_cost = (
-                execution_budget * max(refined.difficulty, 1) / total_weight
-                if total_weight
-                else 0
+        refined_plan = (
+            [await manager.refine_task(task) for task in generated]
+            if isinstance(self._get_ai_service(), MockAIProvider)
+            else await manager.refine_plan(generated)
+        )
+        total_weight = sum(max(task.difficulty, 1) for task in refined_plan)
+        execution_cents = int(
+            (Decimal(str(workflow.budget)) * 60).to_integral_value(rounding=ROUND_DOWN)
+        )
+        remaining_cents = execution_cents
+        for index, refined in enumerate(refined_plan, start=1):
+            worker, reason = get_worker_service().match_worker(refined)
+            cents = (
+                remaining_cents
+                if index == len(refined_plan)
+                else execution_cents * max(refined.difficulty, 1) // total_weight
             )
+            remaining_cents -= cents
+            estimated_cost = cents / 100
             tasks.append(
                 TaskRead(
                     id=f"task-{index:03d}",
                     workflow_id=workflow.id,
                     estimated_cost=round(estimated_cost, 2),
+                    assigned_worker_id=worker.id,
+                    assigned_worker_name=worker.name,
+                    assignment_reason=reason,
                     **refined.model_dump(),
                 )
             )
@@ -366,6 +376,12 @@ class WorkflowService:
         return self.transition(workflow.id, WorkflowStatus.EXECUTING)
 
     async def _execute_workers(self, workflow: WorkflowRead) -> WorkflowRead:
+        if workflow.execution_mode == "employee":
+            tasks = self.get_tasks(workflow.id) or []
+            results = self._artifacts[workflow.id].worker_results
+            if not tasks or {t.id for t in tasks} != {r.task_id for r in results}:
+                return workflow
+            return self.transition(workflow.id, WorkflowStatus.REVIEWING)
         executor = self._collaborators.execute_workers
         if executor is None:
             return workflow
@@ -432,7 +448,19 @@ class WorkflowService:
                 for task in tasks
             ]
             self.replace_tasks(workflow.id, revised_tasks)
-            artifacts.worker_results = []
+            if workflow.execution_mode == "employee":
+                artifacts.worker_results = [
+                    r for r in artifacts.worker_results if r.task_id not in revision_reviews
+                ]
+                revised_tasks = [
+                    t.model_copy(update={"status": TaskStatus.COMPLETED})
+                    if t.id not in revision_reviews
+                    else t
+                    for t in revised_tasks
+                ]
+                self.replace_tasks(workflow.id, revised_tasks)
+            else:
+                artifacts.worker_results = []
             self._persist_workflow(workflow.id)
             self._record_event(
                 workflow.id,
@@ -442,8 +470,61 @@ class WorkflowService:
                 artifacts.revision_count,
             )
             return self.transition(workflow.id, WorkflowStatus.EXECUTING)
+        self._set_all_task_statuses(workflow.id, TaskStatus.COMPLETED)
         self._persist_workflow(workflow.id)
         return self.transition(workflow.id, WorkflowStatus.REPORTING)
+
+    async def submit_employee_work(
+        self,
+        workflow_id: str,
+        task_id: str,
+        worker_id: str,
+        deliverable: str,
+    ) -> WorkerResult:
+        async with self._get_run_lock(workflow_id):
+            workflow = self.require(workflow_id)
+            if workflow.execution_mode != "employee" or workflow.status != WorkflowStatus.EXECUTING:
+                raise WorkflowConflictError("This workflow is not accepting employee submissions.")
+            tasks = self.get_tasks(workflow_id) or []
+            task = next((t for t in tasks if t.id == task_id), None)
+            if task is None or task.assigned_worker_id != worker_id:
+                raise WorkflowValidationError("This task is not assigned to the selected employee.")
+            results = self._artifacts[workflow_id].worker_results
+            if task_id in {r.task_id for r in results}:
+                raise WorkflowConflictError("Work is already submitted. Wait for review.")
+            if not set(task.dependency_task_ids) <= {r.task_id for r in results}:
+                raise WorkflowConflictError("Submit the prerequisite tasks first.")
+            result = WorkerResult(
+                task_id=task_id,
+                worker_id=worker_id,
+                summary="Employee submission: " + task.title,
+                output={
+                    "deliverable": deliverable,
+                    "source": "employee",
+                    "assigned_worker": task.assigned_worker_name,
+                    "submitted_at": datetime.now(UTC).isoformat(),
+                },
+                evidence=["Submitted by the assigned employee for management review."],
+                cost=task.estimated_cost,
+                assignment_reason=task.assignment_reason or "",
+            )
+            results.append(result)
+            self.replace_tasks(
+                workflow_id,
+                [
+                    t.model_copy(update={"status": TaskStatus.SUBMITTED}) if t.id == task_id else t
+                    for t in tasks
+                ],
+            )
+            self._persist_workflow(workflow_id)
+            self._record_event(
+                workflow_id,
+                "employee",
+                "WORK_SUBMITTED",
+                f"{task.assigned_worker_name} submitted {task.title} for review",
+                0,
+            )
+            return result.model_copy(deep=True)
 
     async def _generate_report(self, workflow: WorkflowRead) -> WorkflowRead:
         generator = self._collaborators.generate_report
@@ -484,6 +565,7 @@ class WorkflowService:
             report=artifacts.report,
             marketing=artifacts.marketing,
             reviews=artifacts.reviews,
+            results=artifacts.worker_results,
         )
         self.store_executive_summary(workflow.id, summary)
         return self.transition(workflow.id, WorkflowStatus.COMPLETED)
@@ -528,9 +610,7 @@ class WorkflowService:
             WorkflowStatus.FAILED,
             WorkflowStatus.CANCELLED,
         }:
-            raise WorkflowConflictError(
-                f"Workflow cannot be cancelled from {workflow.status}"
-            )
+            raise WorkflowConflictError(f"Workflow cannot be cancelled from {workflow.status}")
         return self.transition(workflow_id, WorkflowStatus.CANCELLED)
 
     def retry_failed(self, workflow_id: str) -> WorkflowRead:
@@ -575,6 +655,42 @@ class WorkflowService:
             self._persist_workflow(workflow_id)
             return workflow.model_copy(deep=True)
 
+    def invalidate_summary(self, workflow_id: str) -> None:
+        with self._lock:
+            workflow = self._require_stored(workflow_id)
+            workflow.executive_summary = None
+            workflow.updated_at = datetime.now(UTC)
+            self._persist_workflow(workflow_id)
+
+    async def refresh_summary(
+        self, workflow_id: str, report: Report, marketing: MarketingPlan
+    ) -> WorkflowRead:
+        async with self._get_run_lock(workflow_id):
+            workflow = self.require(workflow_id)
+            if workflow.status != WorkflowStatus.COMPLETED:
+                raise WorkflowConflictError(
+                    "Complete management review before generating the CEO summary."
+                )
+            artifacts = self._artifacts[workflow_id]
+            summary = await self._get_manager().create_executive_summary(
+                workflow=workflow,
+                report=report,
+                marketing=marketing,
+                reviews=artifacts.reviews,
+                results=artifacts.worker_results,
+            )
+            with self._lock:
+                stored = self._require_stored(workflow_id)
+                if stored.updated_at != workflow.updated_at:
+                    raise WorkflowConflictError(
+                        "The plan changed during summary generation. Try again."
+                    )
+                stored.executive_summary = summary
+                stored.updated_at = datetime.now(UTC)
+                artifacts.marketing = marketing
+                self._persist_workflow(workflow_id)
+            return self.require(workflow_id)
+
     def clear(self) -> None:
         """Clear volatile storage for isolated tests."""
 
@@ -596,8 +712,7 @@ class WorkflowService:
             artifact_payload = self._store.get("workflow_artifacts", workflow_id) or {}
             self._workflows[workflow_id] = workflow
             self._tasks[workflow_id] = [
-                TaskRead.model_validate(task)
-                for task in tasks_payload.get("items", [])
+                TaskRead.model_validate(task) for task in tasks_payload.get("items", [])
             ]
             self._artifacts[workflow_id] = WorkflowArtifacts(
                 worker_results=[
@@ -645,12 +760,9 @@ class WorkflowService:
             workflow_id,
             {
                 "worker_results": [
-                    result.model_dump(mode="json")
-                    for result in artifacts.worker_results
+                    result.model_dump(mode="json") for result in artifacts.worker_results
                 ],
-                "reviews": [
-                    review.model_dump(mode="json") for review in artifacts.reviews
-                ],
+                "reviews": [review.model_dump(mode="json") for review in artifacts.reviews],
                 "report": (
                     artifacts.report.model_dump(mode="json")
                     if artifacts.report is not None
@@ -695,9 +807,7 @@ class WorkflowService:
         )
 
     @staticmethod
-    def _validate_worker_results(
-        tasks: list[TaskRead], results: list[WorkerResult]
-    ) -> None:
+    def _validate_worker_results(tasks: list[TaskRead], results: list[WorkerResult]) -> None:
         task_ids = {task.id for task in tasks}
         result_ids = [result.task_id for result in results]
         if len(result_ids) != len(set(result_ids)):
@@ -711,6 +821,7 @@ class WorkflowService:
             model=settings.ai_primary_model or None,
             max_tasks=settings.ai_max_tasks,
             validation_retries=1,
+            include_workforce=not isinstance(self._get_ai_service(), MockAIProvider),
             on_validation_failure=lambda error, attempt: self._record_event(
                 workflow_id,
                 "orchestrator",

@@ -3,9 +3,10 @@ from fastapi import APIRouter, HTTPException, status
 from app.integrations import generate_marketing_for_workflow
 from app.schemas.common import ApiResponse
 from app.schemas.marketing import MarketingPlan
+from app.services.ai_service import AIServiceError
 from app.services.marketing_service import marketing_service
 from app.services.report_service import get_report_service
-from app.services.workflow_service import get_workflow_service
+from app.services.workflow_service import WorkflowConflictError, get_workflow_service
 
 router = APIRouter(prefix="/workflows", tags=["marketing"])
 
@@ -31,6 +32,7 @@ async def generate_marketing_plan(workflow_id: str) -> ApiResponse[MarketingPlan
             },
         )
     plan = await generate_marketing_for_workflow(workflow, report)
+    get_workflow_service().invalidate_summary(workflow_id)
     return ApiResponse(data=plan, message="Marketing plan generated")
 
 
@@ -61,10 +63,39 @@ async def update_marketing_plan(
             },
         )
     try:
+        plan.validate_budget()
+        workflow = get_workflow_service().get(workflow_id)
+        if workflow is None:
+            raise HTTPException(404, "Workflow not found")
+        report = get_report_service().get_report(workflow_id)
+        if report is None:
+            raise HTTPException(409, "Generate the financial report before editing marketing")
+        plan = plan.model_copy(
+            update={"approved_budget": max(0, report.financial.remaining_budget)}
+        )
         saved = marketing_service.save_plan(plan)
     except ValueError as exc:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail={"code": "BUDGET_EXCEEDED", "message": str(exc)},
         ) from exc
-    return ApiResponse(data=saved, message="Marketing plan saved")
+    if get_workflow_service().get(workflow_id) is not None:
+        get_workflow_service().invalidate_summary(workflow_id)
+    return ApiResponse(data=saved, message="Marketing plan saved; refresh the CEO summary")
+
+
+@router.post("/{workflow_id}/summary/refresh")
+async def refresh_summary(workflow_id: str):
+    if get_workflow_service().get(workflow_id) is None:
+        raise HTTPException(404, "Workflow not found")
+    plan = marketing_service.get_plan(workflow_id)
+    report = get_report_service().get_report(workflow_id)
+    if plan is None or report is None:
+        raise HTTPException(409, "Complete reporting and marketing first")
+    try:
+        workflow = await get_workflow_service().refresh_summary(workflow_id, report, plan)
+    except WorkflowConflictError as exc:
+        raise HTTPException(409, str(exc)) from exc
+    except AIServiceError as exc:
+        raise HTTPException(502, str(exc)) from exc
+    return ApiResponse(data=workflow, message="CEO summary updated")

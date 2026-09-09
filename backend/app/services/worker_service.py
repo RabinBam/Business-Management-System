@@ -40,7 +40,11 @@ class WorkerService:
     def get_directory(self, tasks: list[TaskRead]) -> list[WorkerRead]:
         active_counts: dict[str, int] = {}
         for task in tasks:
-            if task.assigned_worker_id and task.status is TaskStatus.RUNNING:
+            if task.assigned_worker_id and task.status in {
+                TaskStatus.PENDING,
+                TaskStatus.RUNNING,
+                TaskStatus.SUBMITTED,
+            }:
                 active_counts[task.assigned_worker_id] = (
                     active_counts.get(task.assigned_worker_id, 0) + 1
                 )
@@ -48,9 +52,7 @@ class WorkerService:
             WorkerRead(
                 **profile.model_dump(),
                 department=_department_for_role(profile.role),
-                availability=(
-                    "BUSY" if active_counts.get(profile.id, 0) else "AVAILABLE"
-                ),
+                availability=("BUSY" if active_counts.get(profile.id, 0) else "AVAILABLE"),
                 workload_percent=min(active_counts.get(profile.id, 0) * 25, 100),
                 active_tasks=active_counts.get(profile.id, 0),
             )
@@ -74,9 +76,7 @@ class WorkerService:
         # Step 1 — filter by required_role (case-insensitive).
         required_role = _normalize_role(task.required_role)
         role_matches = [
-            profile
-            for profile in self._profiles
-            if _normalize_role(profile.role) == required_role
+            profile for profile in self._profiles if _normalize_role(profile.role) == required_role
         ]
 
         if not role_matches:
@@ -87,15 +87,14 @@ class WorkerService:
             reason_prefix = f"Matched role '{task.required_role}'. "
 
         # Step 2 — filter by minimum experience.
-        exp_matches = [
-            p for p in candidates
-            if p.experience_years >= task.minimum_experience_years
-        ]
+        exp_matches = [p for p in candidates if p.experience_years >= task.minimum_experience_years]
 
         if not exp_matches:
             # Fallback: sort a *copy* so we never mutate the internal list.
             candidates = sorted(
-                candidates, key=lambda w: w.experience_years, reverse=True,
+                candidates,
+                key=lambda w: w.experience_years,
+                reverse=True,
             )
             reason_prefix += (
                 f"No worker meets {task.minimum_experience_years} years "
@@ -104,8 +103,7 @@ class WorkerService:
         else:
             candidates = exp_matches
             reason_prefix += (
-                f"Meets experience requirement "
-                f"(>= {task.minimum_experience_years} years). "
+                f"Meets experience requirement (>= {task.minimum_experience_years} years). "
             )
 
         # Step 3 — score by skill overlap.
@@ -138,7 +136,8 @@ class WorkerService:
         return best_candidate, reason
 
     def match_workers_for_tasks(
-        self, tasks: list[GeneratedTask],
+        self,
+        tasks: list[GeneratedTask],
     ) -> list[tuple[GeneratedTask, WorkerProfile, str]]:
         """Match every task and return ``(task, worker, reason)`` tuples."""
         return [(t, *self.match_worker(t)) for t in tasks]
@@ -185,4 +184,9 @@ def _department_for_role(role: str) -> str:
 
 
 def _normalize_role(role: str) -> str:
-    return " ".join(role.replace("_", " ").split()).casefold()
+    normalized = " ".join(role.replace("_", " ").split()).casefold()
+    return {
+        "business analyst": "analyst",
+        "financial analyst": "analyst",
+        "marketing specialist": "marketer",
+    }.get(normalized, normalized)

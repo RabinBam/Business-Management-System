@@ -22,7 +22,7 @@ function getApiUrl(): string {
   return PUBLIC_API_URL;
 }
 
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
+export async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`${getApiUrl()}${path}`, {
     ...init,
     headers: { "Content-Type": "application/json", ...init?.headers },

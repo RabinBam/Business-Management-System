@@ -1,5 +1,5 @@
 import os
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 
 def _as_bool(value: str) -> bool:
@@ -29,16 +29,17 @@ class Settings:
     ai_provider: str = os.getenv("AI_PROVIDER", "mock")
     ai_primary_model: str = os.getenv("AI_PRIMARY_MODEL", "")
     ai_worker_model: str = os.getenv("AI_WORKER_MODEL", "")
-    openai_api_key: str = os.getenv("OPENAI_API_KEY", "")
+    ai_max_output_tokens: int = _as_positive_int(
+        os.getenv("AI_MAX_OUTPUT_TOKENS", "8000"),
+        default=8000,
+    )
+    openai_api_key: str = field(default=os.getenv("OPENAI_API_KEY", ""), repr=False)
+    openrouter_api_key: str = field(default=os.getenv("OPENROUTER_API_KEY", ""), repr=False)
     ai_timeout_seconds: float = _as_positive_float(
         os.getenv("AI_TIMEOUT_SECONDS", "30"), default=30.0
     )
-    ai_max_retries: int = _as_positive_int(
-        os.getenv("AI_MAX_RETRIES", "1"), default=1
-    )
-    ai_max_tasks: int = _as_positive_int(
-        os.getenv("AI_MAX_TASKS", "8"), default=8
-    )
+    ai_max_retries: int = _as_positive_int(os.getenv("AI_MAX_RETRIES", "1"), default=1)
+    ai_max_tasks: int = _as_positive_int(os.getenv("AI_MAX_TASKS", "8"), default=8)
     management_max_revisions: int = _as_positive_int(
         os.getenv("MANAGEMENT_MAX_REVISIONS", "2"), default=2
     )
@@ -61,9 +62,7 @@ class Settings:
         ).split(",")
         if host.strip()
     )
-    simulate_report_failure: bool = _as_bool(
-        os.getenv("SIMULATE_REPORT_FAILURE", "false")
-    )
+    simulate_report_failure: bool = _as_bool(os.getenv("SIMULATE_REPORT_FAILURE", "false"))
 
 
 settings = Settings()

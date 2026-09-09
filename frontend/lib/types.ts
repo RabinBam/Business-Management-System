@@ -3,9 +3,9 @@ export type WorkflowStatus =
   | "REPORTING" | "MARKETING" | "FINAL_REVIEW" | "COMPLETED" | "FAILED"
   | "CANCELLED";
 
-export type TaskStatus = "PENDING" | "RUNNING" | "COMPLETED" | "FAILED";
+export type TaskStatus = "PENDING" | "RUNNING" | "SUBMITTED" | "COMPLETED" | "FAILED";
 
-export interface WorkflowCreate { title: string; objective: string; budget: number; deadline: string; }
+export interface WorkflowCreate { title: string; objective: string; budget: number; deadline: string; execution_mode?: "ai" | "employee"; sales_history?: number[]; }
 export interface ExecutiveSummary {
   objective: string;
   overview: string;
@@ -42,6 +42,8 @@ export interface Task {
   dependency_task_ids: string[];
   expected_output: string;
   acceptance_criteria: string[];
+  employee_brief?: string;
+  handoff_notes?: string;
   status: TaskStatus;
   estimated_cost?: number;
   assigned_worker_id?: string | null;

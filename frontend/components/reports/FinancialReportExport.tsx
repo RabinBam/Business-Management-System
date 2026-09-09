@@ -30,6 +30,7 @@ export function FinancialReportDownloadButton({
   const remaining = totalBudget - expense;
   const currentRevenue = metrics?.latest.revenue ?? report.sales_prediction.current_sales;
   const predictedRevenue = report.sales_prediction.predicted_sales;
+  const forecastAvailable = report.sales_prediction.method !== "unavailable";
 
   async function download() {
     if (!rootRef.current || exporting) return;
@@ -97,12 +98,12 @@ export function FinancialReportDownloadButton({
           <p>Dataset: {datasetName} · Workflow: {report.workflow_id}{metrics ? ` · Records: ${metrics.rows.length} · Coverage: ${metrics.coverage}` : " · API-generated report"}</p>
         </header>
         <section className={styles.kpis} data-pdf-section>
-          <article><span>Current Revenue</span><strong>{formatNpr(currentRevenue)}</strong></article>
+          <article><span>Current Revenue</span><strong>{forecastAvailable ? formatNpr(currentRevenue) : "Not supplied"}</strong></article>
           <article><span>Total Budget</span><strong>{formatNpr(totalBudget)}</strong></article>
           <article><span>Planned Spend</span><strong>{formatNpr(expense)}</strong></article>
           <article><span>Remaining Budget</span><strong>{formatNpr(remaining)}</strong></article>
-          <article><span>Predicted Revenue</span><strong>{formatNpr(predictedRevenue)}</strong></article>
-          <article><span>Predicted Growth</span><strong>{report.sales_prediction.growth_percent.toFixed(1)}%</strong></article>
+          <article><span>Predicted Revenue</span><strong>{forecastAvailable ? formatNpr(predictedRevenue) : "Unavailable"}</strong></article>
+          <article><span>Predicted Growth</span><strong>{forecastAvailable ? `${report.sales_prediction.growth_percent.toFixed(1)}%` : "Unavailable"}</strong></article>
           <article><span>Budget Utilization</span><strong>{totalBudget ? (expense / totalBudget * 100).toFixed(1) : "0.0"}%</strong></article>
           <article><span>Forecast Method</span><strong>{report.sales_prediction.method.replaceAll("_", " ")}</strong></article>
         </section>
@@ -117,10 +118,10 @@ export function FinancialReportDownloadButton({
             )}
           </div>
         </section>
-        <section className="chartCard" data-pdf-section>
+        {forecastAvailable && <section className="chartCard" data-pdf-section>
           <header><div><span>Sales Revenue Forecast</span><h2>{formatNpr(predictedRevenue)}</h2></div><small>{report.sales_prediction.method.replaceAll("_", " ")}</small></header>
           <div className={styles.forecast}><ForecastChart data={[{ month: "Current", historical: currentRevenue }, { month: "Predicted", forecast: predictedRevenue }]} /></div>
-        </section>
+        </section>}
         {metrics && <ReportAnalytics rows={metrics.rows} />}
         <section className={styles.insights} data-pdf-section>
           <div><h2>Risks</h2>{report.risks.length ? <ul>{report.risks.map((item) => <li key={item}>{item}</li>)}</ul> : <p>No risks were returned.</p>}</div>

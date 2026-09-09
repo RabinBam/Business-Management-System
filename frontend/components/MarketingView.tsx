@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { AppShell } from "./AppShell";
 import { EmptyState, ErrorState, LoadingSkeleton } from "./AsyncStates";
 import { getMarketingPlan, updateMarketingPlan } from "@/lib/api";
@@ -125,6 +126,7 @@ export function MarketingView({ id }: { id: string }) {
               : "Save Marketing Plan"}
         </button>
       </header>
+      <section className="workspaceNotice"><strong>Marketing team handoff</strong><p>This campaign builds on the reviewed employee work and finance budget. Refine the audience, outcome, schedule and allocations, then save. Saving records a plan; it does not launch advertisements.</p><div className="contextLinks"><Link href="/tasks">Team briefings & assignments →</Link><Link href={`/executive-summary/${id}`}>CEO summary →</Link></div></section>
       {error && (
         <p className="inlineError" role="alert">
           {error}
@@ -189,28 +191,18 @@ export function MarketingView({ id }: { id: string }) {
             ))}
           </div>
         </section>
-        <aside className="planDetails">
+        <aside className="planDetails workspaceCard">
           <section>
             <span>Target audience</span>
-            <p>{plan.target_audience}</p>
+            <textarea aria-label="Target audience" rows={3} value={plan.target_audience} onChange={e => setPlan({...plan,target_audience:e.target.value})}/>
           </section>
           <section>
             <span>Expected outcome</span>
-            <p>
-              {plan.expected_outcome || "No expected outcome was returned."}
-            </p>
+            <textarea aria-label="Expected outcome" rows={4} value={plan.expected_outcome} onChange={e => setPlan({...plan,expected_outcome:e.target.value})}/>
           </section>
           <section className="timelineSection">
             <span>Execution Timeline</span>
-            {plan.timeline.length ? (
-              <ol>
-                {plan.timeline.map((item) => (
-                  <li key={item}>{item}</li>
-                ))}
-              </ol>
-            ) : (
-              <p>No timeline was returned.</p>
-            )}
+            <textarea aria-label="Execution timeline, one step per line" rows={7} value={plan.timeline.join("\n")} onChange={e => setPlan({...plan,timeline:e.target.value.split("\n")})}/>
           </section>
         </aside>
       </div>

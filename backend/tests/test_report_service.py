@@ -42,7 +42,9 @@ class TestReportGeneration:
         workflow = _make_workflow()
         report = service.generate_report(workflow)
         assert isinstance(report.sales_prediction, SalesPrediction)
-        assert report.sales_prediction.method == "linear_regression"
+        assert report.sales_prediction.method == "unavailable"
+        assert report.sales_prediction.current_sales == 0
+        assert report.sales_prediction.predicted_sales == 0
 
     def test_report_is_cached(self) -> None:
         service = ReportService()

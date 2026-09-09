@@ -25,7 +25,7 @@ async def _execute_workers(tasks: list[TaskRead]) -> list[WorkerResult]:
     workflow_id = tasks[0].workflow_id if tasks else None
     return await execute_with_watch(
         "worker_agent",
-        lambda: get_worker_agent().assign_and_execute_all(tasks),
+        lambda: get_worker_agent().execute_all(tasks),
         workflow_id=workflow_id,
         max_retries=1,
     )
@@ -75,6 +75,13 @@ async def generate_marketing_for_workflow(
         "sales_prediction": report.sales_prediction.model_dump(mode="json"),
         "risks": list(report.risks),
         "recommendations": list(report.recommendations),
+        "approved_team_work": [
+            {
+                "task_id": r.task_id,
+                "deliverable": str(r.output.get("deliverable", r.summary))[:2500],
+            }
+            for r in get_workflow_service().get_worker_results(workflow.id) or []
+        ],
     }
     return await execute_with_watch(
         "marketing_agent",

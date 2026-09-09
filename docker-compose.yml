@@ -4,13 +4,15 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     ports:
-      - "${BACKEND_PORT:-8000}:8000"
+      - "127.0.0.1:${BACKEND_PORT:-8000}:8000"
     environment:
       APP_ENV: ${APP_ENV:-development}
       AI_PROVIDER: ${AI_PROVIDER:-mock}
       AI_PRIMARY_MODEL: ${AI_PRIMARY_MODEL:-}
       AI_WORKER_MODEL: ${AI_WORKER_MODEL:-}
+      AI_MAX_OUTPUT_TOKENS: ${AI_MAX_OUTPUT_TOKENS:-8000}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
       AI_TIMEOUT_SECONDS: ${AI_TIMEOUT_SECONDS:-30}
       AI_MAX_RETRIES: ${AI_MAX_RETRIES:-1}
       AI_MAX_TASKS: ${AI_MAX_TASKS:-8}
@@ -41,10 +43,16 @@ services:
       args:
         NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000/api/v1}
     ports:
-      - "${FRONTEND_PORT:-3000}:3000"
+      - "127.0.0.1:${FRONTEND_PORT:-3000}:3000"
     environment:
       NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000/api/v1}
       INTERNAL_API_URL: http://backend:8000/api/v1
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
     depends_on:
       backend:
         condition: service_healthy

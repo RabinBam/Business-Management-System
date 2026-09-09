@@ -30,12 +30,12 @@ function navItems(workflowId?: string) {
   return [
     { label: "Command Center", href: "/", id: "command", icon: "grid" as const },
     { label: "Workflow", href: `/workflows/${id}`, id: "workflow", icon: "workflow" as const },
-    { label: "Workers", href: "/workers?demo=1", id: "workers", icon: "workers" as const },
+    { label: "Workers", href: "/workers", id: "workers", icon: "workers" as const },
     { label: "Reports", href: `/reports/${id}`, id: "reports", icon: "reports" as const },
     { label: "Marketing", href: `/marketing/${id}`, id: "marketing", icon: "marketing" as const },
     {
       label: "Watcher",
-      href: workflowId ? `/watcher?workflow=${id}` : "/watcher?demo=1",
+      href: workflowId ? `/watcher?workflow=${id}` : "/watcher",
       id: "watcher",
       icon: "watcher" as const,
     },

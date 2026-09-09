@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { getWorkers } from "@/lib/api";
 import type { Worker } from "@/lib/types";
 import { EmptyState, ErrorState, LoadingSkeleton } from "./AsyncStates";
@@ -68,7 +69,7 @@ export function WorkersView() {
           <h1>AI Workforce</h1>
           <p>Live matching capacity, skills, availability, and workflow workload.</p>
         </div>
-        <span className="directoryBadge">{workers.length} workers</span>
+        <Link className="primaryButton" href="/employees">Open employee workspace →</Link>
       </header>
       <section className="workerToolbar">
         <div>

@@ -87,6 +87,79 @@ class OpenAIProvider:
             raise AIResponseError("OpenAI output failed Pydantic validation") from exc
 
 
+class OpenRouterProvider:
+    """OpenRouter chat adapter with schema-constrained, locally validated output."""
+
+    def __init__(self, config: Settings, *, client: AsyncOpenAI | None = None) -> None:
+        if not config.openrouter_api_key and client is None:
+            raise AIConfigurationError("OPENROUTER_API_KEY is required for AI_PROVIDER=openrouter")
+        if not config.ai_primary_model:
+            raise AIConfigurationError("AI_PRIMARY_MODEL is required for AI_PROVIDER=openrouter")
+        self._config = config
+        self._client = client or AsyncOpenAI(
+            base_url="https://openrouter.ai/api/v1",
+            api_key=config.openrouter_api_key,
+            timeout=config.ai_timeout_seconds,
+            max_retries=config.ai_max_retries,
+        )
+
+    async def generate_structured(
+        self,
+        *,
+        system_prompt: str,
+        user_prompt: str,
+        schema: type[SchemaT],
+        model: str | None = None,
+    ) -> SchemaT:
+        try:
+            response = await self._client.chat.completions.parse(
+                model=model or self._config.ai_primary_model,
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt},
+                ],
+                response_format=schema,
+                max_tokens=self._config.ai_max_output_tokens,
+                extra_body={
+                    "provider": {"require_parameters": True},
+                    "reasoning": {"enabled": False},
+                },
+                timeout=self._config.ai_timeout_seconds,
+            )
+        except (TypeError, AttributeError) as exc:
+            raise AIResponseError(
+                "OpenRouter returned an incomplete response. "
+                "The free provider may be unavailable; retry the workflow later."
+            ) from exc
+        except ValidationError as exc:
+            raise AIResponseError("OpenRouter output failed Pydantic validation") from exc
+        except OpenAIError as exc:
+            # Provider error bodies may contain sensitive request data.
+            status = getattr(exc, "status_code", None)
+            guidance = {
+                400: "The model rejected the request. Check model structured-output support.",
+                401: "The API key is invalid or expired. Update OPENROUTER_API_KEY in .env.",
+                402: (
+                    "Insufficient OpenRouter credits or key spending allowance. "
+                    "Check your balance at https://openrouter.ai/settings/credits "
+                    "and the key's spending limit. An unlimited key limit does not add credits."
+                ),
+                403: "Access was denied. Check OpenRouter account and provider restrictions.",
+                404: "No matching model endpoint was found. Check the model ID and routing.",
+                429: "OpenRouter rate limit reached. Wait before retrying the workflow.",
+            }.get(status, "Check OpenRouter availability, model support, and your connection.")
+            status_label = f" (HTTP {status})" if isinstance(status, int) else ""
+            raise AIServiceError(
+                f"OpenRouter request failed: {exc.__class__.__name__}{status_label}. " + guidance
+            ) from exc
+        if not response.choices or response.choices[0].message.parsed is None:
+            raise AIResponseError("OpenRouter returned no parsed structured output")
+        try:
+            return schema.model_validate(response.choices[0].message.parsed)
+        except ValidationError as exc:
+            raise AIResponseError("OpenRouter output failed Pydantic validation") from exc
+
+
 class MockAIProvider:
     """Deterministic provider for local runs and isolated agent tests.
 
@@ -97,8 +170,7 @@ class MockAIProvider:
 
     def __init__(
         self,
-        responses: Mapping[type[BaseModel], list[BaseModel | Mapping[str, object]]]
-        | None = None,
+        responses: Mapping[type[BaseModel], list[BaseModel | Mapping[str, object]]] | None = None,
     ) -> None:
         self._responses: dict[type[BaseModel], deque[BaseModel | Mapping[str, object]]] = (
             defaultdict(deque)
@@ -134,9 +206,7 @@ class MockAIProvider:
             raise AIResponseError(f"Mock response for {schema.__name__} is invalid") from exc
 
     @staticmethod
-    def _default_payload(
-        schema: type[SchemaT], user_prompt: str
-    ) -> Mapping[str, object]:
+    def _default_payload(schema: type[SchemaT], user_prompt: str) -> Mapping[str, object]:
         if schema.__name__ == "GeneratedTaskList":
             return {
                 "tasks": [
@@ -152,9 +222,7 @@ class MockAIProvider:
                         "required_skills": ["planning", "analysis"],
                         "dependency_task_ids": [],
                         "expected_output": "An approved operating plan",
-                        "acceptance_criteria": [
-                            "Scope, milestones, and owners are documented"
-                        ],
+                        "acceptance_criteria": ["Scope, milestones, and owners are documented"],
                     },
                     {
                         "title": "Prepare execution readiness",
@@ -166,9 +234,7 @@ class MockAIProvider:
                         "required_skills": ["delivery", "risk management"],
                         "dependency_task_ids": ["task-001"],
                         "expected_output": "A delivery-ready execution checklist",
-                        "acceptance_criteria": [
-                            "Resources, risks, and controls are confirmed"
-                        ],
+                        "acceptance_criteria": ["Resources, risks, and controls are confirmed"],
                     },
                 ]
             }
@@ -251,4 +317,6 @@ def get_ai_service() -> AIService:
         return MockAIProvider()
     if provider == "openai":
         return OpenAIProvider(settings)
+    if provider == "openrouter":
+        return OpenRouterProvider(settings)
     raise AIConfigurationError(f"Unsupported AI_PROVIDER: {settings.ai_provider}")

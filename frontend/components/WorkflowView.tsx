@@ -100,10 +100,12 @@ export function WorkflowView({ id }: { id: string }) {
         <div className="completionBadge"><strong>{completion}%</strong><span>Overall Completion</span></div>
       </header>
       {error && <p className="inlineError" role="alert">{error}</p>}
+      {workflow.failure && <p className="inlineError" role="alert">{workflow.failure.message}</p>}
+      <section className="workspaceNotice"><strong>What happens next</strong><p>{workflow.status === "COMPLETED" ? "The workflow is complete. Review the deliverables, report, and executive summary." : workflow.status === "FAILED" ? "Resolve the error above, then retry the workflow." : workflow.execution_mode === "employee" && workflow.status === "EXECUTING" ? "Employees submit their assigned work in Employee workspace. Once all work is submitted, select Review submitted work." : workflow.status === "CREATED" ? "Prepare tasks to let AI plan the objective and assign the existing workforce." : "The current stage is shown below. Use the action button to continue."}</p><Link href="/employees">Employee workspace →</Link><p>Task costs are planning estimates allocated from 60% of the objective budget. Record actual payments separately in Money.</p></section>
       {!isDemo && (
         <div className="workflowActions">
           {workflow.status === "CREATED" && <button disabled={Boolean(action)} onClick={() => void perform("refine")}>{action === "refine" ? "Preparing…" : "Prepare Tasks"}</button>}
-          {workflow.status !== "COMPLETED" && workflow.status !== "CANCELLED" && workflow.status !== "FAILED" && <button disabled={Boolean(action)} onClick={() => void perform("run")}>{action === "run" ? "Running…" : "Run to Next Handoff"}</button>}
+          {workflow.status !== "COMPLETED" && workflow.status !== "CANCELLED" && workflow.status !== "FAILED" && <button disabled={Boolean(action) || (workflow.execution_mode === "employee" && workflow.status === "EXECUTING" && results.length < tasks.length)} onClick={() => void perform("run")}>{action === "run" ? "Running…" : workflow.execution_mode === "employee" && workflow.status === "EXECUTING" ? "Review submitted work" : "Continue workflow"}</button>}
           {workflow.status === "FAILED" && <button disabled={Boolean(action)} onClick={() => void perform("retry")}>{action === "retry" ? "Retrying…" : "Retry Workflow"}</button>}
           {canCancel && <button className="dangerAction" disabled={Boolean(action)} onClick={() => void perform("cancel")}>{action === "cancel" ? "Cancelling…" : "Cancel"}</button>}
         </div>
@@ -150,6 +152,11 @@ export function WorkflowView({ id }: { id: string }) {
               <article key={result.task_id}>
                 <strong>Worker output · {result.task_id}</strong>
                 <h3>{result.summary}</h3><p>Recorded cost: {formatNpr(result.cost)}</p>
+                {typeof result.output.deliverable === "string" && (
+                  <details><summary>Read deliverable</summary><p style={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>{result.output.deliverable}</p></details>
+                )}
+                {result.evidence.length > 0 && <ul>{result.evidence.map((item, index) => <li key={index}>{item}</li>)}</ul>}
+                {Array.isArray(result.output.limitations) && result.output.limitations.length > 0 && <p>Limitations: {result.output.limitations.map(String).join(" · ")}</p>}
               </article>
             ))}
           </aside>

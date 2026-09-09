@@ -10,7 +10,7 @@ import {
   demoReport,
   demoWatcherStatus,
 } from "@/lib/demoData";
-import { getWorkflow } from "@/lib/api";
+import { getWorkflow, request } from "@/lib/api";
 import { formatNpr } from "@/lib/formatters";
 import type { Workflow } from "@/lib/types";
 import { FinancialReportDownloadButton } from "./reports/FinancialReportExport";
@@ -18,6 +18,13 @@ import { FinancialReportDownloadButton } from "./reports/FinancialReportExport";
 function LiveExecutiveSummary({ id }: { id: string }) {
   const [workflow, setWorkflow] = useState<Workflow | null>(null);
   const [error, setError] = useState("");
+  const [refreshing, setRefreshing] = useState(false);
+  async function refreshSummary() {
+    setRefreshing(true);
+    try { setWorkflow(await request<Workflow>(`/workflows/${id}/summary/refresh`, {method:"POST"})); setError(""); }
+    catch(e) { setError(e instanceof Error ? e.message : "Unable to refresh summary"); }
+    finally { setRefreshing(false); }
+  }
 
   useEffect(() => {
     let active = true;
@@ -42,7 +49,7 @@ function LiveExecutiveSummary({ id }: { id: string }) {
   if (error)
     return (
       <AppShell mode="real">
-        <ErrorState message={error} />
+        <ErrorState message={error} retry={() => void refreshSummary()} />
       </AppShell>
     );
   if (!workflow)
@@ -64,8 +71,9 @@ function LiveExecutiveSummary({ id }: { id: string }) {
         </header>
         <EmptyState
           title="Executive summary unavailable"
-          message="The summary appears after management completes the final review."
+          message="Complete the workflow first. If the marketing plan was edited, refresh the CEO summary to include the latest changes."
         />
+        {workflow.status === "COMPLETED" && <button className="primaryButton" disabled={refreshing} onClick={() => void refreshSummary()}>{refreshing ? "Summarizing…" : "Refresh CEO summary"}</button>}
       </AppShell>
     );
 

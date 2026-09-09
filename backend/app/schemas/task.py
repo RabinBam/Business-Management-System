@@ -13,6 +13,7 @@ class TaskPriority(StrEnum):
 class TaskStatus(StrEnum):
     PENDING = "PENDING"
     RUNNING = "RUNNING"
+    SUBMITTED = "SUBMITTED"
     COMPLETED = "COMPLETED"
     FAILED = "FAILED"
 
@@ -42,6 +43,8 @@ class GeneratedTask(BaseModel):
     dependency_task_ids: list[str] = Field(default_factory=list, max_length=20)
     expected_output: str = Field(min_length=1, max_length=1_000)
     acceptance_criteria: list[str] = Field(min_length=1, max_length=12)
+    employee_brief: str = Field(default="", max_length=2000)
+    handoff_notes: str = Field(default="", max_length=1500)
 
     @field_validator("priority", mode="before")
     @classmethod
