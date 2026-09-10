@@ -13,6 +13,14 @@ router = APIRouter(prefix="/workflows", tags=["marketing"])
 
 @router.post("/{workflow_id}/marketing/generate", response_model=ApiResponse[MarketingPlan])
 async def generate_marketing_plan(workflow_id: str) -> ApiResponse[MarketingPlan]:
+    service = get_workflow_service()
+    if service.get(workflow_id) is None:
+        raise HTTPException(404, "Workflow not found")
+    async with service._get_run_lock(workflow_id):
+        return await _generate_marketing_locked(workflow_id)
+
+
+async def _generate_marketing_locked(workflow_id: str) -> ApiResponse[MarketingPlan]:
     workflow = get_workflow_service().get(workflow_id)
     if workflow is None:
         raise HTTPException(
@@ -22,6 +30,8 @@ async def generate_marketing_plan(workflow_id: str) -> ApiResponse[MarketingPlan
                 "message": f"Workflow '{workflow_id}' was not found.",
             },
         )
+    if workflow.status in {"FINAL_REVIEW", "COMPLETED"}:
+        raise HTTPException(409, "Marketing is already confirmed for final review.")
     report = get_report_service().get_report(workflow_id)
     if report is None:
         raise HTTPException(
@@ -31,7 +41,14 @@ async def generate_marketing_plan(workflow_id: str) -> ApiResponse[MarketingPlan
                 "message": "Generate the workflow report before marketing.",
             },
         )
-    plan = await generate_marketing_for_workflow(workflow, report)
+    try:
+        plan = await generate_marketing_for_workflow(workflow, report)
+    except AIServiceError as exc:
+        raise HTTPException(502, str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(
+            422, "AI marketing allocations exceeded the budget. Retry generation."
+        ) from exc
     get_workflow_service().invalidate_summary(workflow_id)
     return ApiResponse(data=plan, message="Marketing plan generated")
 
@@ -62,26 +79,37 @@ async def update_marketing_plan(
                 "message": "Path and marketing-plan workflow IDs must match.",
             },
         )
+    return await _save_draft(workflow_id, plan, approve=False)
+
+
+async def _save_draft(workflow_id: str, plan: MarketingPlan, *, approve: bool):
+    if get_workflow_service().get(workflow_id) is None:
+        raise HTTPException(404, "Workflow not found")
     try:
-        plan.validate_budget()
-        workflow = get_workflow_service().get(workflow_id)
-        if workflow is None:
-            raise HTTPException(404, "Workflow not found")
-        report = get_report_service().get_report(workflow_id)
-        if report is None:
-            raise HTTPException(409, "Generate the financial report before editing marketing")
-        plan = plan.model_copy(
-            update={"approved_budget": max(0, report.financial.remaining_budget)}
+        saved = await get_workflow_service().save_marketing_draft(
+            workflow_id,
+            plan,
+            approve=approve,
         )
-        saved = marketing_service.save_plan(plan)
+    except WorkflowConflictError as exc:
+        raise HTTPException(409, str(exc)) from exc
     except ValueError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
-            detail={"code": "BUDGET_EXCEEDED", "message": str(exc)},
-        ) from exc
-    if get_workflow_service().get(workflow_id) is not None:
-        get_workflow_service().invalidate_summary(workflow_id)
-    return ApiResponse(data=saved, message="Marketing plan saved; refresh the CEO summary")
+        raise HTTPException(422, str(exc)) from exc
+    return ApiResponse(
+        data=saved,
+        message=(
+            "Marketing approved for final review"
+            if approve
+            else "Draft saved; awaiting marketing approval"
+        ),
+    )
+
+
+@router.post("/{workflow_id}/marketing/approve", response_model=ApiResponse[MarketingPlan])
+async def approve_marketing(workflow_id: str, plan: MarketingPlan):
+    if plan.workflow_id != workflow_id:
+        raise HTTPException(409, "Path and marketing-plan workflow IDs must match")
+    return await _save_draft(workflow_id, plan, approve=True)
 
 
 @router.post("/{workflow_id}/summary/refresh")

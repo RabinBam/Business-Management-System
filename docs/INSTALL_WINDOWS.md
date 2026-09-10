@@ -154,3 +154,18 @@ Each Start-Byapari launch recreates the app and resets saved work and money.
 Employees and API keys are preserved. The database is backed up before reset in
 the Docker data volume as byapari-before-launch-*.db. Browser refresh does not reset
 data. To retain work across launches, set RESET_DEMO_ON_START=false in .env.
+
+Command Center also has **Reset demo data** for resetting without restarting.
+It preserves employees and API settings, and refuses to reset during an active
+workflow operation. Marketing shows a waiting screen until a plan is generated.
+Browser API requests now use the app address, avoiding a separate browser connection
+to port 8000. Docker Desktop alone does not launch the containers: use Start-Byapari.
+
+## Marketing confirmation
+
+The workflow pauses at Marketing after its draft is generated. Edit and save the
+plan on the Marketing page. Saving alone does not approve it. Choose **Confirm
+marketing & proceed to final review** to save your current edits and release the
+workflow. On the workflow page, choose Continue workflow to generate the final CEO
+summary. Repeated runs cannot bypass confirmation or regenerate the waiting draft.
+Confirmed plans are locked against further edits.

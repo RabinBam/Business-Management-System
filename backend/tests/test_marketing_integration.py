@@ -59,9 +59,54 @@ def test_saved_marketing_plan_can_be_loaded_through_the_api() -> None:
     assert (
         client.get(f"/api/v1/workflows/{workflow_id}").json()["data"]["executive_summary"] is None
     )
+    assert (
+        client.post(f"/api/v1/workflows/{workflow_id}/marketing/approve", json=payload).status_code
+        == 200
+    )
+    assert (
+        client.post(f"/api/v1/workflows/{workflow_id}/run").json()["data"]["status"] == "COMPLETED"
+    )
     assert client.post(f"/api/v1/workflows/{workflow_id}/summary/refresh").json()["data"][
         "executive_summary"
     ]
     payload["approved_budget"] = 999999
     payload["allocations"][0]["amount"] = 999998
-    assert client.put(f"/api/v1/workflows/{workflow_id}/marketing", json=payload).status_code == 422
+    assert client.put(f"/api/v1/workflows/{workflow_id}/marketing", json=payload).status_code == 409
+
+
+def test_marketing_requires_explicit_approval_and_uses_edited_draft():
+    from app.services.workflow_service import get_workflow_service
+
+    client = TestClient(app)
+    wid = client.post(
+        "/api/v1/workflows",
+        json={
+            "title": "Approval gate",
+            "objective": "Prepare a measurable local launch plan.",
+            "budget": 1000,
+            "deadline": (date.today() + timedelta(days=30)).isoformat(),
+        },
+    ).json()["data"]["id"]
+    base = f"/api/v1/workflows/{wid}"
+    assert client.post(base + "/run").json()["data"]["status"] == "MARKETING"
+    plan = client.get(base + "/marketing").json()["data"]
+    plan["target_audience"] = "Edited audience for final review"
+    assert client.put(base + "/marketing", json=plan).status_code == 200
+    assert client.post(base + "/run").json()["data"]["status"] == "MARKETING"
+    assert client.get(base).json()["data"]["executive_summary"] is None
+    bad = dict(
+        plan,
+        approved_budget=999999,
+        allocations=[
+            {"channel": "Search", "amount": 999999, "reason": "Invalid"},
+        ],
+    )
+    assert client.post(base + "/marketing/approve", json=bad).status_code == 422
+    assert client.get(base).json()["data"]["status"] == "MARKETING"
+    assert client.post(base + "/marketing/approve", json=plan).status_code == 200
+    service = get_workflow_service()
+    assert service._artifacts[wid].marketing.target_audience == plan["target_audience"]
+    assert client.get(base).json()["data"]["status"] == "FINAL_REVIEW"
+    assert client.post(base + "/marketing/approve", json=plan).status_code == 409
+    assert client.put(base + "/marketing", json=plan).status_code == 409
+    assert client.post(base + "/run").json()["data"]["status"] == "COMPLETED"

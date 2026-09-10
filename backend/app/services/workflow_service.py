@@ -479,7 +479,9 @@ class WorkflowService:
         async with self._get_run_lock(workflow_id):
             workflow = self._require_stored(workflow_id)
             if workflow.status != WorkflowStatus.EXECUTING:
-                raise WorkflowConflictError("Prepare the task plan first; it must be awaiting work.")
+                raise WorkflowConflictError(
+                    "Prepare the task plan first; it must be awaiting work."
+                )
             tasks = self.get_tasks(workflow_id) or []
             if not tasks:
                 raise WorkflowConflictError("No prepared tasks to complete.")
@@ -488,25 +490,39 @@ class WorkflowService:
             for task in tasks:
                 if task.id not in results:
                     results[task.id] = WorkerResult(
-                        task_id=task.id, worker_id=task.assigned_worker_id or "demo",
+                        task_id=task.id,
+                        worker_id=task.assigned_worker_id or "demo",
                         summary="DEMO ONLY: simulated completion; no real work performed.",
-                        output={"source": "demo", "assigned_worker": task.assigned_worker_name,
-                                "deliverable": "DEMO ONLY: simulated completion of " + task.title},
-                        evidence=["Demo button; not verified evidence"], cost=task.estimated_cost,
+                        output={
+                            "source": "demo",
+                            "assigned_worker": task.assigned_worker_name,
+                            "deliverable": "DEMO ONLY: simulated completion of " + task.title,
+                        },
+                        evidence=["Demo button; not verified evidence"],
+                        cost=task.estimated_cost,
                         assignment_reason=task.assignment_reason or "Demo",
                     )
             artifacts.worker_results = list(results.values())
-            artifacts.reviews = [ManagementReview(
-                task_id=t.id, decision=ManagementDecision.APPROVED,
-                feedback="DEMO ONLY: review bypassed for presentation.",
-            ) for t in tasks]
-            self.replace_tasks(workflow_id, [
-                t.model_copy(update={"status": TaskStatus.COMPLETED}) for t in tasks
-            ])
+            artifacts.reviews = [
+                ManagementReview(
+                    task_id=t.id,
+                    decision=ManagementDecision.APPROVED,
+                    feedback="DEMO ONLY: review bypassed for presentation.",
+                )
+                for t in tasks
+            ]
+            self.replace_tasks(
+                workflow_id, [t.model_copy(update={"status": TaskStatus.COMPLETED}) for t in tasks]
+            )
             self.transition(workflow_id, WorkflowStatus.REVIEWING)
             self._persist_workflow(workflow_id)
-            self._record_event(workflow_id, "demo", "DEMO_COMPLETED",
-                               "Task completion and review simulated for presentation.", 0)
+            self._record_event(
+                workflow_id,
+                "demo",
+                "DEMO_COMPLETED",
+                "Task completion and review simulated for presentation.",
+                0,
+            )
             return self.transition(workflow_id, WorkflowStatus.REPORTING)
 
     async def submit_employee_work(
@@ -581,6 +597,8 @@ class WorkflowService:
         if generator is None:
             return workflow
         artifacts = self._artifacts[workflow.id]
+        if artifacts.marketing is not None:
+            return workflow
         if artifacts.report is None:
             raise WorkflowConflictError("Report is unavailable for marketing generation")
         marketing = await _await_if_needed(generator(workflow, artifacts.report))
@@ -588,7 +606,55 @@ class WorkflowService:
             raise WorkflowValidationError("Marketing plan belongs to a different workflow")
         artifacts.marketing = marketing.model_copy(deep=True)
         self._persist_workflow(workflow.id)
-        return self.transition(workflow.id, WorkflowStatus.FINAL_REVIEW)
+        self._record_event(
+            workflow.id,
+            "marketing",
+            "AWAITING_APPROVAL",
+            "Marketing draft ready for edits and explicit team approval.",
+            0,
+        )
+        return self.get(workflow.id)
+
+    async def save_marketing_draft(
+        self,
+        workflow_id: str,
+        plan: MarketingPlan,
+        *,
+        approve: bool = False,
+    ) -> MarketingPlan:
+        from app.services.marketing_service import marketing_service
+
+        async with self._get_run_lock(workflow_id):
+            workflow = self._require_stored(workflow_id)
+            if workflow.status != WorkflowStatus.MARKETING:
+                raise WorkflowConflictError(
+                    "Marketing edits and approval require the marketing stage."
+                )
+            artifacts = self._artifacts[workflow_id]
+            if artifacts.report is None or artifacts.marketing is None:
+                raise WorkflowConflictError("Generate the marketing draft before approval.")
+            if plan.workflow_id != workflow_id:
+                raise WorkflowValidationError("Marketing plan belongs to another workflow")
+            saved = plan.model_copy(
+                update={
+                    "approved_budget": max(0, artifacts.report.financial.remaining_budget),
+                }
+            )
+            saved.validate_budget()
+            marketing_service.save_plan(saved)
+            artifacts.marketing = saved.model_copy(deep=True)
+            self.invalidate_summary(workflow_id)
+            self._persist_workflow(workflow_id)
+            if approve:
+                self._record_event(
+                    workflow_id,
+                    "marketing",
+                    "MARKETING_APPROVED",
+                    "Marketing team confirmed the edited plan for final review.",
+                    0,
+                )
+                self.transition(workflow_id, WorkflowStatus.FINAL_REVIEW)
+            return saved
 
     async def _finalize(self, workflow: WorkflowRead) -> WorkflowRead:
         artifacts = self._artifacts[workflow.id]
@@ -725,6 +791,9 @@ class WorkflowService:
                 artifacts.marketing = marketing
                 self._persist_workflow(workflow_id)
             return self.require(workflow_id)
+
+    def has_running_operations(self) -> bool:
+        return any(lock.locked() for lock in self._run_locks.values())
 
     def clear(self) -> None:
         """Clear volatile storage for isolated tests."""

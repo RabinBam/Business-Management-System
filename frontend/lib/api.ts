@@ -19,24 +19,32 @@ function getApiUrl(): string {
   if (typeof window === "undefined") {
     return process.env.INTERNAL_API_URL || PUBLIC_API_URL;
   }
-  return PUBLIC_API_URL;
+  return "/api/v1";
+}
+
+export class ApiError extends Error {
+  constructor(message: string, public status: number, public code: string) { super(message); }
 }
 
 export async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(`${getApiUrl()}${path}`, {
+  let response: Response;
+  try { response = await fetch(`${getApiUrl()}${path}`, {
     ...init,
     headers: { "Content-Type": "application/json", ...init?.headers },
     cache: "no-store",
     credentials: "include",
   });
+  } catch { throw new ApiError("Cannot reach Byapari. Start Docker Desktop and run Start-Byapari, then retry.", 0, "CONNECTION_FAILED"); }
   const body = await response.json().catch(() => null);
   if (!response.ok) {
-    throw new Error(
+    throw new ApiError(
       body?.detail?.message ??
         body?.error?.message ??
         "The service could not complete the request.",
+      response.status, body?.error?.code ?? body?.detail?.code ?? "REQUEST_FAILED",
     );
   }
+  if (!body || !("data" in body)) throw new ApiError("The server returned an invalid response. Retry after the app finishes starting.", 502, "INVALID_RESPONSE");
   return (body as ApiResponse<T>).data;
 }
 

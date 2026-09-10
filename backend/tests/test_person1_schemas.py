@@ -21,9 +21,7 @@ def _task(title: str, dependencies: list[str] | None = None) -> dict[str, object
 
 def test_task_plan_rejects_unknown_dependency() -> None:
     with pytest.raises(ValidationError, match="unknown dependencies"):
-        GeneratedTaskList.model_validate(
-            {"tasks": [_task("Plan", ["task-999"])]}
-        )
+        GeneratedTaskList.model_validate({"tasks": [_task("Plan", ["task-999"])]})
 
 
 def test_task_plan_rejects_cycles() -> None:

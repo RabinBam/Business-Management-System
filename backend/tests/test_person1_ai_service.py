@@ -70,4 +70,3 @@ def test_openai_provider_requires_credentials_and_model() -> None:
         OpenAIProvider(
             Settings(ai_provider="openai", openai_api_key="secret"),
         )
-

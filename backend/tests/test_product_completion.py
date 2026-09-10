@@ -61,9 +61,7 @@ def test_sqlite_services_restore_validated_state() -> None:
         approved_budget=75_000,
         objective=created.objective,
         target_audience="Operations leaders",
-        allocations=[
-            BudgetAllocation(channel="Search", amount=10_000, reason="High intent")
-        ],
+        allocations=[BudgetAllocation(channel="Search", amount=10_000, reason="High intent")],
         timeline=["Week 1: launch"],
     )
     marketing_service_store = MarketingService(store=store)
@@ -169,6 +167,15 @@ def test_management_revision_reexecutes_and_then_completes() -> None:
     workflow = service.create(_payload())
     completed = asyncio.run(service.run_workflow(workflow.id))
 
+    assert completed.status is WorkflowStatus.MARKETING
+    asyncio.run(
+        service.save_marketing_draft(
+            workflow.id,
+            service._artifacts[workflow.id].marketing,
+            approve=True,
+        )
+    )
+    completed = asyncio.run(service.run_workflow(workflow.id))
     assert completed.status is WorkflowStatus.COMPLETED
     assert executions == 2
     tasks = service.get_tasks(workflow.id) or []
@@ -185,6 +192,13 @@ def test_completed_public_product_contracts() -> None:
     workflow_id = created.json()["data"]["id"]
 
     refined = client.post(f"/api/v1/workflows/{workflow_id}/refine")
+    completed = client.post(f"/api/v1/workflows/{workflow_id}/run")
+    assert completed.json()["data"]["status"] == "MARKETING"
+    plan = client.get(f"/api/v1/workflows/{workflow_id}/marketing").json()["data"]
+    assert (
+        client.post(f"/api/v1/workflows/{workflow_id}/marketing/approve", json=plan).status_code
+        == 200
+    )
     completed = client.post(f"/api/v1/workflows/{workflow_id}/run")
     status_response = client.get(f"/api/v1/workflows/{workflow_id}/status")
     workflows = client.get("/api/v1/workflows")

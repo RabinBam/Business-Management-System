@@ -44,6 +44,13 @@ def test_dev_acceptance_workflow_reaches_every_handoff() -> None:
         workflow_id = created.json()["data"]["id"]
 
         completed = client.post(f"/api/v1/workflows/{workflow_id}/run")
+        assert completed.json()["data"]["status"] == "MARKETING"
+        plan = client.get(f"/api/v1/workflows/{workflow_id}/marketing").json()["data"]
+        assert (
+            client.post(f"/api/v1/workflows/{workflow_id}/marketing/approve", json=plan).status_code
+            == 200
+        )
+        completed = client.post(f"/api/v1/workflows/{workflow_id}/run")
         assert completed.status_code == 200
         completed_workflow = completed.json()["data"]
         assert completed_workflow["status"] == "COMPLETED"
@@ -73,8 +80,9 @@ def test_dev_acceptance_workflow_reaches_every_handoff() -> None:
     marketing_data = marketing.json()["data"]
     assert marketing.status_code == 200
     assert marketing_data["workflow_id"] == workflow_id
-    assert sum(item["amount"] for item in marketing_data["allocations"]) <= (
-        marketing_data["approved_budget"]
+    assert (
+        sum(item["amount"] for item in marketing_data["allocations"])
+        <= (marketing_data["approved_budget"])
     )
 
     watcher_data = watcher.json()["data"]
@@ -84,8 +92,7 @@ def test_dev_acceptance_workflow_reaches_every_handoff() -> None:
     lifecycle_events = [
         event
         for event in watcher_data["events"]
-        if event["workflow_id"] == workflow_id
-        and event["event_type"] == "STATUS_CHANGED"
+        if event["workflow_id"] == workflow_id and event["event_type"] == "STATUS_CHANGED"
     ]
     assert len(lifecycle_events) == 8
     assert all(event["resolved"] for event in lifecycle_events)

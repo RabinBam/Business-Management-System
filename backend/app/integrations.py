@@ -109,7 +109,8 @@ def _record_workflow_event(
         event_type=event_type,
         message=message,
         retry_count=retry_count,
-        resolved=event_type == "STATUS_CHANGED",
+        resolved=event_type
+        in {"STATUS_CHANGED", "AWAITING_APPROVAL", "MARKETING_APPROVED", "DEMO_COMPLETED"},
     )
 
 

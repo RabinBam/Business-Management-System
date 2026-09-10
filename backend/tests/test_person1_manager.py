@@ -71,9 +71,7 @@ def _marketing() -> MarketingPlan:
         approved_budget=20_000,
         objective="Reach qualified buyers",
         target_audience="Operations leaders",
-        allocations=[
-            BudgetAllocation(channel="Search", amount=10_000, reason="High intent")
-        ],
+        allocations=[BudgetAllocation(channel="Search", amount=10_000, reason="High intent")],
         timeline=["Week 1: launch"],
     )
 
@@ -144,4 +142,3 @@ def test_manager_summary_preserves_authoritative_objective() -> None:
 
     assert summary.objective == _workflow().objective
     assert summary.management_recommendation
-

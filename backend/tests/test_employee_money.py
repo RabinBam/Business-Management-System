@@ -76,6 +76,10 @@ def test_employee_submission_review_and_persistence(client):
     restored = WorkflowService(ai_service=MockAIProvider(), store=get_json_store())
     assert len(restored.get_worker_results(wid)) == len(tasks)
     completed = client.post(f"/api/v1/workflows/{wid}/run")
+    assert completed.json()["data"]["status"] == "MARKETING"
+    plan = client.get(f"/api/v1/workflows/{wid}/marketing").json()["data"]
+    assert client.post(f"/api/v1/workflows/{wid}/marketing/approve", json=plan).status_code == 200
+    completed = client.post(f"/api/v1/workflows/{wid}/run")
     assert completed.json()["data"]["status"] == "COMPLETED"
     assert all(
         t["status"] == "COMPLETED"
@@ -180,6 +184,7 @@ def test_demo_reset_backups_and_preserves_other_data(tmp_path):
     import sqlite3
 
     from app.demo_start import reset_demo
+
     path = tmp_path / "demo.db"
     store = SQLiteJsonStore("sqlite:///" + str(path))
     store.put("workflows", "demo", {"title": "demo"})
@@ -193,3 +198,29 @@ def test_demo_reset_backups_and_preserves_other_data(tmp_path):
     assert len(backups) == 1
     with sqlite3.connect(backups[0]) as connection:
         assert connection.execute("SELECT count(*) FROM json_records").fetchone()[0] == 3
+
+
+def test_demo_reset_endpoint_clears_all_work(client):
+    client.post("/api/v1/workflows", json=payload())
+    get_json_store().put("money", "test", {"amount": "10"})
+    response = client.post("/api/v1/employees/demo/reset")
+    assert response.status_code == 200
+    assert client.get("/api/v1/workflows").json()["data"] == []
+    assert get_json_store().get("money", "test") is None
+    assert len(client.get("/api/v1/workers").json()["data"]) == 6
+
+
+def test_marketing_generation_returns_actionable_ai_error(client, monkeypatch):
+    from app.api import marketing
+    from app.services.ai_service import AIServiceError
+
+    w = client.post("/api/v1/workflows", json=payload()).json()["data"]
+    client.get(f"/api/v1/workflows/{w['id']}/report")
+
+    async def fail(*args, **kwargs):
+        raise AIServiceError("Free provider is temporarily unavailable; retry later.")
+
+    monkeypatch.setattr(marketing, "generate_marketing_for_workflow", fail)
+    response = client.post(f"/api/v1/workflows/{w['id']}/marketing/generate")
+    assert response.status_code == 502
+    assert "temporarily unavailable" in response.json()["error"]["message"]

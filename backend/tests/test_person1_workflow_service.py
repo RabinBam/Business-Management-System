@@ -107,6 +107,15 @@ def test_workflow_completes_through_injected_collaborators() -> None:
 
     result = asyncio.run(service.run_workflow(workflow.id))
 
+    assert result.status is WorkflowStatus.MARKETING
+    asyncio.run(
+        service.save_marketing_draft(
+            workflow.id,
+            service._artifacts[workflow.id].marketing,
+            approve=True,
+        )
+    )
+    result = asyncio.run(service.run_workflow(workflow.id))
     assert result.status is WorkflowStatus.COMPLETED
     assert result.executive_summary is not None
     assert result.executive_summary.objective == workflow.objective
@@ -124,6 +133,15 @@ def test_workflow_resumes_after_collaborators_are_configured() -> None:
     service.configure_collaborators(_complete_collaborators())
     completed = asyncio.run(service.run_workflow(workflow.id))
 
+    assert completed.status is WorkflowStatus.MARKETING
+    asyncio.run(
+        service.save_marketing_draft(
+            workflow.id,
+            service._artifacts[workflow.id].marketing,
+            approve=True,
+        )
+    )
+    completed = asyncio.run(service.run_workflow(workflow.id))
     assert completed.status is WorkflowStatus.COMPLETED
 
 
@@ -179,7 +197,7 @@ def test_concurrent_runs_are_serialized_and_idempotent() -> None:
 
     results = asyncio.run(run_twice())
 
-    assert all(result.status is WorkflowStatus.COMPLETED for result in results)
+    assert all(result.status is WorkflowStatus.MARKETING for result in results)
     tasks = service.get_tasks(workflow.id)
     assert tasks is not None
     assert len(tasks) == 2
@@ -201,6 +219,15 @@ def test_workflow_emits_events_through_observer_port() -> None:
 
     result = asyncio.run(service.run_workflow(workflow.id))
 
+    assert result.status is WorkflowStatus.MARKETING
+    asyncio.run(
+        service.save_marketing_draft(
+            workflow.id,
+            service._artifacts[workflow.id].marketing,
+            approve=True,
+        )
+    )
+    result = asyncio.run(service.run_workflow(workflow.id))
     assert result.status is WorkflowStatus.COMPLETED
     assert any(event[2] == "STATUS_CHANGED" for event in events)
     assert events[-1][3] == "Workflow entered COMPLETED"

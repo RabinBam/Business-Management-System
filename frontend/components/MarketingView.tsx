@@ -2,14 +2,17 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { AppShell } from "./AppShell";
 import { EmptyState, ErrorState, LoadingSkeleton } from "./AsyncStates";
-import { getMarketingPlan, updateMarketingPlan } from "@/lib/api";
+import { ApiError, getMarketingPlan, updateMarketingPlan, request, getWorkflow } from "@/lib/api";
 import { formatNpr } from "@/lib/formatters";
 import type { MarketingPlan } from "@/lib/types";
 import { demoMarketingPlan } from "@/lib/demoData";
 
 export function MarketingView({ id }: { id: string }) {
+  const router = useRouter();
+  const [approved, setApproved] = useState(false);
   const isDemo = id === "demo";
   const [plan, setPlan] = useState<MarketingPlan | null>(
     isDemo ? demoMarketingPlan : null,
@@ -20,10 +23,14 @@ export function MarketingView({ id }: { id: string }) {
   const [saving, setSaving] = useState(false);
   const load = useCallback(async () => {
     setLoading(true);
+    setError("");
     try {
       setPlan(await getMarketingPlan(id));
+      const workflow = await getWorkflow(id);
+      setApproved(["FINAL_REVIEW", "COMPLETED"].includes(workflow.status));
       setError("");
     } catch (reason) {
+      if (reason instanceof ApiError && reason.code === "MARKETING_NOT_READY") { setPlan(null); return; }
       setError(
         reason instanceof Error
           ? reason.message
@@ -70,7 +77,7 @@ export function MarketingView({ id }: { id: string }) {
     }
     try {
       setPlan(await updateMarketingPlan(id, plan));
-      setMessage("Marketing plan saved and validated by the backend.");
+      setMessage("Marketing draft saved. Confirm it when the team is ready.");
     } catch (reason) {
       setError(
         reason instanceof Error
@@ -80,6 +87,17 @@ export function MarketingView({ id }: { id: string }) {
     } finally {
       setSaving(false);
     }
+  }
+  async function approve() {
+    if (!plan || saving || exceeded || approved) return;
+    setSaving(true); setError("");
+    try {
+      await request(`/workflows/${id}/marketing/approve`, { method: "POST", body: JSON.stringify(plan) });
+      setApproved(true);
+      router.push(`/workflows/${id}`);
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "Unable to approve marketing.");
+    } finally { setSaving(false); }
   }
   if (loading)
     return (
@@ -101,9 +119,11 @@ export function MarketingView({ id }: { id: string }) {
     return (
       <AppShell>
         <EmptyState
-          title="No marketing plan"
-          message="Marketing recommendations will appear after the reporting stage is complete."
+          title="Marketing is waiting for the workflow"
+          message="Complete task review and run the workflow through reporting and marketing. If the AI request failed, retry from the workflow page."
         />
+        <Link className="primaryButton" href={`/workflows/${id}`}>Open workflow</Link>
+        <button className="secondaryButton" onClick={() => void load()}>Check again</button>
       </AppShell>
     );
   return (
@@ -116,7 +136,7 @@ export function MarketingView({ id }: { id: string }) {
         </div>
         <button
           className="primaryButton"
-          disabled={saving || exceeded}
+          disabled={saving || exceeded || approved}
           onClick={save}
         >
           {saving
@@ -126,6 +146,7 @@ export function MarketingView({ id }: { id: string }) {
               : "Save Marketing Plan"}
         </button>
       </header>
+      <section className="workspaceNotice"><strong>{approved ? "Marketing confirmed" : "Waiting for marketing confirmation"}</strong><p>{approved ? "This plan is confirmed. Continue the workflow to complete final review." : "Edit the plan below. Save keeps it as a draft. Confirm saves your current edits and releases the workflow to final review."}</p>{!approved && <button className="primaryButton" disabled={saving || exceeded} onClick={() => void approve()}>Confirm marketing & proceed to final review</button>}<p><Link href={`/workflows/${id}`}>Open workflow →</Link></p></section>
       <section className="workspaceNotice"><strong>Marketing team handoff</strong><p>This campaign builds on the reviewed employee work and finance budget. Refine the audience, outcome, schedule and allocations, then save. Saving records a plan; it does not launch advertisements.</p><div className="contextLinks"><Link href="/tasks">Team briefings & assignments →</Link><Link href={`/executive-summary/${id}`}>CEO summary →</Link></div></section>
       {error && (
         <p className="inlineError" role="alert">

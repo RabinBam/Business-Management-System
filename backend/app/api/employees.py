@@ -1,7 +1,8 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.schemas.common import ApiResponse
+from app.security import require_admin_key
 from app.services.worker_service import get_worker_service
 from app.services.workflow_service import (
     WorkflowConflictError,
@@ -68,3 +69,31 @@ async def demo_quick_complete():
             except WorkflowConflictError:
                 continue
     return ApiResponse(data=completed, message="Demo tasks completed; review was simulated")
+
+
+@router.post("/demo/reset", dependencies=[Depends(require_admin_key)])
+async def reset_demo_data():
+    from pathlib import Path
+
+    from app.config import settings
+    from app.database import get_json_store
+    from app.demo_start import reset_demo
+    from app.services.marketing_service import marketing_service
+    from app.services.report_service import get_report_service
+    from app.services.watcher_service import watcher_service
+
+    service = get_workflow_service()
+    if service.has_running_operations():
+        raise HTTPException(
+            409, "Wait for the current workflow operation to finish before resetting."
+        )
+    if settings.database_url.startswith("sqlite:///") and ":memory:" not in settings.database_url:
+        reset_demo(Path(settings.database_url.removeprefix("sqlite:///")))
+    service.clear()
+    marketing_service.clear()
+    get_report_service().clear()
+    watcher_service.clear()
+    get_json_store().clear_namespace("money")
+    return ApiResponse(
+        data={"reset": True}, message="Saved work reset. Employees and API settings kept."
+    )
